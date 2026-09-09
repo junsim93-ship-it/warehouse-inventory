@@ -1048,12 +1048,38 @@
     return days < 0 ? 'exp-over' : (days <= 30 ? 'exp-warn' : '');
   }
 
-  // 기준수량이 정해져 있고 현재 수량이 그 이하로 내려가면 재고 부족 -- 둘 다 앞자리 숫자를 읽을
-  // 수 있어야 판단 가능하다 ("10박스"처럼 단위가 붙어도 앞의 10은 그대로 읽힘).
+  // 재고 부족은 더 이상 위치 하나만 보고 판단하지 않는다 -- 같은 제품명 + 같은 로트번호를 가진
+  // 항목을 모든 위치(선반 칸 + 팔레트)에서 모아 수량을 합산하고, 그 중 하나에라도 입력된
+  // 기준수량과 비교한다. buildLowStockGroups()가 refresh()마다 다시 계산해 채워 둔다.
+  function lowStockKey(it){
+    return (it.name || '').trim().toLowerCase() + ' ' + (it.lot || '').trim().toLowerCase();
+  }
+
+  var lowStockGroups = {};
+  function buildLowStockGroups(){
+    var map = {};
+    function add(it){
+      if (!filled(it) || !it.name) return;
+      var key = lowStockKey(it);
+      var g = map[key] || (map[key] = { qty: 0, threshold: null });
+      var q = parseInt(it.qty, 10);
+      if (!isNaN(q)) g.qty += q;
+      var t = parseInt(it.threshold, 10);
+      if (g.threshold === null && !isNaN(t)) g.threshold = t;
+    }
+    groups.shelf.forEach(function(p){
+      gridOf(p, stock.shelves[p.id]).cells.forEach(function(c){ cellItems(c).forEach(add); });
+    });
+    palletUnits.forEach(function(p){ palletItems(p).forEach(add); });
+    lowStockGroups = map;
+  }
+
+  // 둘 다 앞자리 숫자를 읽을 수 있어야 판단 가능하다 ("10박스"처럼 단위가 붙어도 앞의 10은
+  // 그대로 읽힘) -- 그 숫자는 이제 이 항목 하나가 아니라 같은 제품/로트 그룹의 합계다.
   function isLowStock(it){
-    if (!it || !it.threshold) return false;
-    var q = parseInt(it.qty, 10), t = parseInt(it.threshold, 10);
-    return !isNaN(q) && !isNaN(t) && q <= t;
+    if (!it || !it.name) return false;
+    var g = lowStockGroups[lowStockKey(it)];
+    return !!g && g.threshold !== null && g.qty <= g.threshold;
   }
 
   function makeRow(name, qty, threshold, expiry, lot){
@@ -1067,7 +1093,7 @@
     qtyInput.value = qty || '';
     var thresholdInput = document.createElement('input');
     thresholdInput.type = 'text'; thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
-    thresholdInput.title = '이 수량 이하로 떨어지면 재고 부족으로 표시돼요';
+    thresholdInput.title = '같은 제품명+로트번호는 모든 위치 수량을 합쳐서 이 기준과 비교해요. 한 곳에만 입력해도 적용돼요.';
     thresholdInput.value = threshold || '';
     var expiryInput = document.createElement('input');
     expiryInput.type = 'date'; expiryInput.title = '유통기한';
@@ -1547,6 +1573,7 @@
   }
 
   function refresh(){
+    buildLowStockGroups();
     renderStats();
     renderStock();
   }
