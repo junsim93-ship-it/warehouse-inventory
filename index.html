@@ -1214,7 +1214,10 @@
   // 재고 부족 판정이 어느 쪽 기준을 따르는지 알 수 없어지므로, 애초에 서로 달라질 수 없게 한다.
   // ponytail: 지금 저장 중인 위치 자체는 스캔 대상에서 제외한다 (그 위치는 rows로 이미 반영됨) --
   // 같은 선반의 다른 칸에 같은 제품/로트가 또 있다면 이번 배치엔 안 실리고, 다음 저장 때 맞춰진다.
-  function collectThresholdSyncs(rows, batch, skipCollection, skipId){
+  // computeThresholdSyncs only reads -- it's safe to call before the save confirm to find out
+  // which other locations would change, without touching `stock` or Firestore. applyThresholdSyncs
+  // then does the actual write (called only once the user has confirmed).
+  function computeThresholdSyncs(rows, skipCollection, skipId){
     var updates = {};
     rows.forEach(function(it){
       if (!filled(it) || !it.name || !it.threshold) return;
@@ -1253,10 +1256,7 @@
         return next;
       });
       if (!changed) return;
-      var updatedAt = Date.now();
-      stock.shelves[p.id] = { cols: g.cols, cells: newCells, updatedAt: updatedAt };
-      batch.set(db.doc('shelves/' + p.id), { cols: g.cols, cells: newCells.map(packCell), updatedAt: updatedAt });
-      synced.push({ collection: 'shelves', id: p.id, label: p.label || '선반', before: before, after: after });
+      synced.push({ collection: 'shelves', id: p.id, label: p.label || '선반', cols: g.cols, cells: newCells, before: before, after: after });
     });
 
     palletUnits.forEach(function(p){
@@ -1265,17 +1265,27 @@
       if (!items.length) return;
       var next = syncItems(items);
       if (!next) return;
-      var updatedAt = Date.now();
-      stock.pallets[p.id] = { items: next, updatedAt: updatedAt };
-      batch.set(db.doc('pallets/' + p.id), { items: next, updatedAt: updatedAt });
-      synced.push({ collection: 'pallets', id: p.id, label: p.label || '팔레트', before: items, after: next });
+      synced.push({ collection: 'pallets', id: p.id, label: p.label || '팔레트', items: next, before: items, after: next });
     });
 
     return synced;
   }
 
+  function applyThresholdSyncs(synced, batch){
+    synced.forEach(function(s){
+      var updatedAt = Date.now();
+      if (s.collection === 'shelves'){
+        stock.shelves[s.id] = { cols: s.cols, cells: s.cells, updatedAt: updatedAt };
+        batch.set(db.doc('shelves/' + s.id), { cols: s.cols, cells: s.cells.map(packCell), updatedAt: updatedAt });
+      } else {
+        stock.pallets[s.id] = { items: s.items, updatedAt: updatedAt };
+        batch.set(db.doc('pallets/' + s.id), { items: s.items, updatedAt: updatedAt });
+      }
+    });
+  }
+
   // 같은 위치 안에서도 (예: 팔레트 목록에 같은 제품/로트가 여러 줄로) 서로 다른 기준수량을 적어
-  // 놓고 저장할 수 있었던 구멍 -- collectThresholdSyncs는 "다른 위치"만 맞춰 줬지, 지금 막
+  // 놓고 저장할 수 있었던 구멍 -- computeThresholdSyncs는 "다른 위치"만 맞춰 줬지, 지금 막
   // 저장하는 rows 자체는 그대로 저장했었다. 저장 직전에 rows 안에서부터 먼저 통일시킨다
   // (같은 제품/로트 중 마지막으로 입력된 값을 그 그룹 전체에 적용).
   function normalizeThresholds(rows){
@@ -1314,7 +1324,13 @@
       payload = { items: rows, updatedAt: Date.now() };
       loc = target.label;
     }
-    if (!window.confirm(loc + ' 재고를 저장할까요?')) return;
+    var synced = computeThresholdSyncs(rows, target.collection, target.id);
+    var confirmMsg = loc + ' 재고를 저장할까요?';
+    if (synced.length){
+      confirmMsg += '\n\n같은 제품/로트를 쓰는 다른 위치 ' + synced.length + '곳의 기준수량도 이 값으로 함께 맞춰져요: '
+        + synced.map(function(s){ return s.label; }).join(', ');
+    }
+    if (!window.confirm(confirmMsg)) return;
     saveBtn.disabled = true;
     saveState.textContent = '저장 중…';
     stock[target.collection][target.id] = payload;   // show it immediately; the listener confirms
@@ -1323,7 +1339,7 @@
       : payload;
     var batch = db.batch();
     batch.set(db.doc(target.collection + '/' + target.id), firePayload);
-    var synced = collectThresholdSyncs(rows, batch, target.collection, target.id);
+    applyThresholdSyncs(synced, batch);
     refresh();
     batch.commit().then(function(){
       saveBtn.disabled = false;
