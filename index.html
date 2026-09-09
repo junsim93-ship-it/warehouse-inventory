@@ -1414,12 +1414,22 @@
     var showEmpty = showEmptyEl.checked;
     stockGrid.innerHTML = '';
     var shown = 0, products = 0, usedLocations = 0;
+    // while searching, the header should answer "그 제품이 어디에 몇 건 있는지" -- not the
+    // grand total -- so count separately how many locations/entries actually match the product
+    // name (not just a shelf label match, which only decides what stays visible below).
+    var qLocations = 0, qEntries = 0;
+    function countNameHits(items){
+      if (!q) return 0;
+      return items.filter(function(it){ return filled(it) && (it.name || '').toLowerCase().indexOf(q) !== -1; }).length;
+    }
 
     groups.shelf.slice().sort(byShelfOrder).forEach(function(p){
       var cells = gridOf(p, stock.shelves[p.id]).cells;
       var items = cells.reduce(function(acc, c){ return acc.concat(cellItems(c)); }, []);
       products += items.length;
       if (items.length) usedLocations++;
+      var hits = countNameHits(items);
+      if (hits){ qLocations++; qEntries += hits; }
       if ((!items.length && !showEmpty) || !matches(q, p.label, items)) return;
       stockGrid.appendChild(shelfCard(p));
       shown++;
@@ -1431,6 +1441,8 @@
       var items = palletItems(p);
       products += items.length;
       if (items.length) usedLocations++;
+      var hits = countNameHits(items);
+      if (hits){ qLocations++; qEntries += hits; }
       if ((!items.length && !showEmpty) || !matches(q, p.label, items)) return;
       stockGrid.appendChild(palletCard(p));
       shown++;
@@ -1439,7 +1451,9 @@
     if (!shown){
       stockGrid.appendChild(h('div', 'stock-blank', db ? '조건에 맞는 위치가 없어요' : '이 미리보기에서는 저장된 재고를 불러올 수 없어요'));
     }
-    stockSummary.textContent = '위치 ' + usedLocations + '곳 · 제품 ' + products + '건';
+    stockSummary.textContent = q
+      ? '검색 결과 · 위치 ' + qLocations + '곳 · 제품 ' + qEntries + '건'
+      : '위치 ' + usedLocations + '곳 · 제품 ' + products + '건';
   }
   stockSearch.addEventListener('input', renderStock);
   showEmptyEl.addEventListener('change', renderStock);
