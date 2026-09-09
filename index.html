@@ -342,6 +342,18 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="auditBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auditTitle">
+    <div class="modal-head">
+      <h2 id="auditTitle">변경 이력</h2>
+      <button class="modal-close" id="auditClose" aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="auditList"></div>
+    </div>
+  </div>
+</div>
+
 <script id="planData" type="application/json">
 {"slideW":3413.3333333333335,"slideH":1866.6666666666667,"pics":[{"media":"image1.png","role":"fixture","x":2196.0,"y":1472,"w":110.66666666666667,"h":130.66666666666666,"rot":90},{"media":"image2.png","role":"room","x":1598.0,"y":1116.6666666666667,"w":294.66666666666669,"h":640,"rot":90},{"role":"door","x":1992.0,"y":1400.0,"w":73.333333333333329,"h":73.333333333333329,"rot":90,"flip":true},{"role":"door","x":2073.6666666666665,"y":1588.0,"w":73.333333333333329,"h":73.333333333333329,"rot":0,"vflip":true,"flip":true},{"id":"shelf-1","media":"image3.png","role":"shelf","cols":9,"x":2437.6499999999966116119224211,"y":484.09761904761876,"w":110.66666666666667,"h":1004.7000000000001,"rot":90},{"id":"shelf-2","media":"image3.png","role":"shelf","cols":8,"x":2493.4666666666633016119224211,"y":319.79047619047619,"w":110.66666666666667,"h":893.06666666666672,"rot":90},{"id":"shelf-3","media":"image4.png","role":"shelf","cols":5,"x":2660.9166666666633116119224211,"y":270.52976190476187,"w":110.66666666666667,"h":558.16666666666670,"rot":90},{"id":"shelf-4","media":"image5.png","role":"shelf","cols":5,"x":2605.0999999999966416119224211,"y":9.427380952380913,"w":110.66666666666667,"h":669.80000000000004,"rot":90},{"id":"shelf-5","media":"image6.png","role":"shelf","cols":9,"x":2101.59999999999690,"y":56.666666666666664,"w":893.7333333333331,"h":232.66666666666667,"rot":0,"poly":[[2101.59999999999690,56.666666666666664],[2995.33333333333000,56.666666666666664],[2995.33333333333000,289.33333333333334],[2901.99999999999700,289.33333333333334],[2901.99999999999700,167.33333333333334],[2101.59999999999690,167.33333333333334]],"labelDy":-60},{"media":"image8.png","role":"fixture","x":1649.3333333333333,"y":109.33333333333333,"w":294.66666666666669,"h":285.33333333333331,"rot":90},{"id":"shelf-8","media":"image9.png","role":"shelf","cols":3,"x":1322.6666666666667,"y":1200,"w":73.333333333333329,"h":379,"rot":0},{"id":"shelf-9","media":"image10.png","role":"shelf","cols":3,"x":1182.6666666666667,"y":1200,"w":77.333333333333329,"h":379,"rot":0},{"id":"shelf-10","media":"image10.png","role":"shelf","cols":3,"x":1042.6666666666667,"y":1200,"w":140.0,"h":379,"rot":0,"poly":[[1042.6666666666667,1200],[1120.0,1200],[1120.0,1504.0],[1182.6666666666667,1504.0],[1182.6666666666667,1579],[1042.6666666666667,1579]],"labelDx":-30},{"id":"shelf-11","media":"image11.png","role":"shelf","cols":5,"x":866.66666666666663,"y":1221.1777777777778,"w":77.333333333333329,"h":446.53333333333336,"rot":0},{"media":"image12.png","role":"fixture","x":580.33333333333337,"y":795,"w":338.66666666666669,"h":106.66666666666667,"rot":180},{"id":"shelf-13","media":"image13.png","role":"shelf","cols":5,"x":356,"y":1624,"w":510.66666666666663,"h":106.66666666666667,"rot":0},{"id":"shelf-14","media":"image10.png","role":"shelf","cols":4,"x":738.66666666666663,"y":1215.8833333333334,"w":77.333333333333329,"h":334.90000000000003,"rot":0},{"id":"shelf-15","media":"image10.png","role":"shelf","cols":3,"x":610.66666666666663,"y":1215.8833333333334,"w":77.333333333333329,"h":334.90000000000003,"rot":0},{"media":"image14.png","role":"fixture","x":848,"y":368,"w":230.66666666666666,"h":121.33333333333333,"rot":90},{"media":"image15.png","role":"fixture","x":2324.0,"y":1233.3333333333333,"w":93.333333333333329,"h":186.66666666666666,"rot":0},{"id":"shelf-18","media":"image16.png","role":"shelf","x":269.6764,"y":1014.4227,"w":223.26666666666668,"h":106.66666666666667,"rot":308.601855698486},{"id":"shelf-19","media":"image17.png","role":"shelf","cols":4,"x":1148.1714285714282,"y":852.72857142857138,"w":88,"h":446.53333333333336,"rot":90},{"id":"pallet-0","media":"image18.png","role":"pallet","x":1879.9666666666665,"y":931.77142857142859,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-1","media":"image18.png","role":"pallet","x":426.66666666666669,"y":1326.6666666666667,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-2","media":"image18.png","role":"pallet","x":426.66666666666669,"y":1436,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-3","media":"image18.png","role":"pallet","x":1991.6000000000001,"y":711.65238095238098,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-4","media":"image18.png","role":"pallet","x":2326.5,"y":494.94642857142856,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-5","media":"image18.png","role":"pallet","x":2221.1666666666665,"y":494.94642857142856,"w":112,"h":109.33333333333333,"rot":90},{"id":"shelf-20","media":"image21.png","role":"shelf","x":1415.4380952380949,"y":1031.9952380952381,"w":93.333333333333329,"h":88,"rot":0},{"id":"shelf-21","media":"image23.png","role":"shelf","cols":2,"x":2625.7260333333333,"y":1400.30,"w":110.66666666666667,"h":446.53333333333336,"rot":90},{"id":"shelf-22","media":"image24.png","role":"shelf","cols":2,"x":2904.326,"y":1304.0,"w":110.66666666666667,"h":374.895,"rot":180},{"id":"shelf-23","media":"image24.png","role":"shelf","cols":2,"x":2809.742,"y":1098.75,"w":110.66666666666667,"h":299.837,"rot":270},{"id":"pallet-6","media":"image18.png","role":"pallet","x":2502.6666666666665,"y":1346.6666666666667,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-7","media":"image18.png","role":"pallet","x":2609.3333333333335,"y":1346.6666666666667,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-29","media":"image18.png","role":"pallet","x":2775.3333333333333,"y":1051.3333333333333,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-30","media":"image18.png","role":"pallet","x":2884.6666666666667,"y":1051.3333333333333,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-8","media":"image25.png","role":"pallet","x":1938.0,"y":504.66666666666669,"w":92,"h":89.333333333333329,"rot":90},{"id":"pallet-9","media":"image18.png","role":"pallet","x":176,"y":1476,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-10","media":"image18.png","role":"pallet","x":176,"y":1585.3333333333333,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-11","media":"image18.png","role":"pallet","x":176,"y":1260,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-12","media":"image18.png","role":"pallet","x":176,"y":1366.6666666666667,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-13","media":"image26.png","role":"pallet","x":610.66666666666663,"y":1162.6666666666667,"w":77.333333333333329,"h":46.666666666666664,"rot":0},{"media":"image27.png","role":"wall","x":581.33333333333337,"y":772,"w":332,"h":24,"rot":0},{"media":"image28.png","role":"wall","x":1260,"y":21.333333333333332,"w":674.66666666666663,"h":24,"rot":0},{"media":"image29.png","role":"wall","x":797.33333333333337,"y":652,"w":241.33333333333334,"h":24,"rot":-89.999983333333333},{"media":"image30.png","role":"wall","x":62.666666666666664,"y":1076,"w":472,"h":24,"rot":128},{"media":"image31.png","role":"wall","x":-88,"y":1490.6666666666667,"w":485.33333333333331,"h":24,"rot":270},{"media":"image32.png","role":"wall","x":153.33333333333334,"y":1732,"w":828,"h":24,"rot":0},{"media":"image33.png","role":"wall","x":497.33333333333331,"y":838.66666666666663,"w":128,"h":24,"rot":108},{"media":"image34.png","role":"wall","x":442.66666666666669,"y":896,"w":112,"h":24,"rot":1},{"media":"image35.png","role":"pillar","x":1939.3333333333333,"y":399.33333333333337,"w":89.333333333333329,"h":104,"rot":0},{"media":"image36.png","role":"wall","x":1917.3333333333333,"y":21.333333333333332,"w":1249.3333333333333,"h":24,"rot":0},{"media":"image37.png","role":"wall","x":2602.6666666666665,"y":596,"w":1138.6666666666667,"h":24,"rot":270},{"media":"image38.png","role":"wall","x":2896,"y":1160,"w":372,"h":24,"rot":180},{"media":"image39.png","role":"wall","x":889.33333333333337,"y":1648,"w":166.66666666666666,"h":24,"rot":271},{"media":"image40.png","role":"wall","x":968,"y":1568,"w":466.66666666666669,"h":24,"rot":0},{"media":"image41.png","role":"wall","x":2980,"y":1442.6666666666667,"w":558.66666666666663,"h":24,"rot":269.99998333333332},{"media":"image42.png","role":"wall","x":2488,"y":1718.6666666666667,"w":765.33333333333337,"h":24,"rot":180},{"media":"image43.png","role":"wall","x":2426.6666666666665,"y":1642.6666666666667,"w":137.33333333333334,"h":24,"rot":89},{"media":"image44.png","role":"wall","x":2114.6666666666665,"y":1565.3333333333333,"w":248,"h":24,"rot":0},{"media":"image45.png","role":"wall","x":1018.6666666666666,"y":282.66666666666669,"w":248,"h":24,"rot":179},{"media":"image46.png","role":"wall","x":1138.6666666666667,"y":150.66666666666666,"w":254.66666666666666,"h":24,"rot":90.999983333333333},{"id":"pallet-14","media":"image18.png","role":"pallet","x":1529.3333333333333,"y":417,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-15","media":"image18.png","role":"pallet","x":1529.3333333333333,"y":305,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-16","media":"image18.png","role":"pallet","x":1529.3333333333333,"y":529,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-17","media":"image18.png","role":"pallet","x":1638.6666666666667,"y":417,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-18","media":"image18.png","role":"pallet","x":1529.3333333333333,"y":193,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-19","media":"image18.png","role":"pallet","x":1420,"y":417,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-20","media":"image18.png","role":"pallet","x":1420,"y":305,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-21","media":"image18.png","role":"pallet","x":1420,"y":529,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-22","media":"image18.png","role":"pallet","x":1420,"y":193,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-23","media":"image18.png","role":"pallet","x":1638.6666666666667,"y":529,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-24","media":"image18.png","role":"pallet","x":1316.0,"y":697.33333333333337,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-25","media":"image18.png","role":"pallet","x":1316.0,"y":809.33333333333337,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-26","media":"image18.png","role":"pallet","x":1206.6666666666667,"y":697.33333333333337,"w":112,"h":109.33333333333333,"rot":90},{"id":"pallet-27","media":"image18.png","role":"pallet","x":1206.6666666666667,"y":809.33333333333337,"w":112,"h":109.33333333333333,"rot":90},{"media":"image47.png","role":"wall","x":917.33333333333337,"y":544,"w":125.33333333333333,"h":24,"rot":178.99998333333335},{"id":"pallet-28","media":"image18.png","role":"pallet","x":1117.3333333333333,"y":321.33333333333331,"w":112,"h":109.33333333333333,"rot":90},{"media":"image48.png","role":"wall","x":2618.6666666666665,"y":1276,"w":268,"h":24,"rot":-179.99998333333335},{"media":"image49.png","role":"wall","x":2818.6666666666665,"y":1216,"w":149.33333333333334,"h":24,"rot":-88.999983333333333},{"media":"image50.png","role":"fixture","x":851.57142857142818,"y":1021.3333333333334,"w":136,"h":98.666666666666671,"rot":90},{"media":"image35.png","role":"pillar","x":944,"y":1196,"w":89.333333333333329,"h":104,"rot":0}],"texts":[{"x":933.33333333333337,"y":393.33333333333331,"w":73.333333333333329,"h":82.666666666666671,"rot":0,"paragraphs":[{"text":"문","szPt":42.43}]},{"x":2224.0,"y":1493.3333333333333,"w":65.333333333333329,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"문","szPt":37.15}]},{"x":2342.6666666666665,"y":1254.6666666666667,"w":89.333333333333329,"h":142.66666666666666,"rot":0,"paragraphs":[{"text":"칠판","szPt":37.15}]},{"x":2364.0,"y":913.33333333333337,"w":274.66666666666669,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"기계팀 선반","szPt":37.15}]},{"x":2364.0,"y":692,"w":272,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"기계팀 선반","szPt":37.15}]},{"x":476,"y":1641.3333333333333,"w":282.66666666666669,"h":153.33333333333334,"rot":0,"paragraphs":[{"text":"수축포","szPt":40.34},{"text":"","szPt":40.34}]},{"x":1678.6666666666667,"y":216,"w":250.66666666666666,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"엘리베이터","szPt":37.15}]},{"x":738.66666666666663,"y":840,"w":157.33333333333334,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"사무","szPt":37.15}]},{"x":986.66666666666663,"y":1045.3333333333333,"w":218.66666666666666,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"제품선반4","szPt":37.15}]},{"x":2528.0,"y":508,"w":272,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"제품선반3","szPt":37.15}]},{"x":2432.0,"y":304,"w":272,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"제품선반2","szPt":37.15}]},{"x":2312.0,"y":76,"w":272,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"제품선반1","szPt":37.15}]},{"x":1696,"y":1405.3333333333333,"w":274.66666666666669,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"기계팀","szPt":37.15}]},{"x":624,"y":1242.6666666666667,"w":65.333333333333329,"h":281.33333333333331,"rot":0,"paragraphs":[{"text":"단상자","szPt":37.15},{"text":"","szPt":37.15}]},{"x":749.33333333333337,"y":1257.3333333333333,"w":69.333333333333329,"h":281.33333333333331,"rot":0,"paragraphs":[{"text":"임가공","szPt":37.15},{"text":"","szPt":37.15}]},{"x":878.66666666666663,"y":1261.3333333333333,"w":69.333333333333329,"h":281.33333333333331,"rot":0,"paragraphs":[{"text":"임가공","szPt":37.15},{"text":"","szPt":37.15}]},{"x":1054.6666666666667,"y":1305.3333333333333,"w":69.333333333333329,"h":212,"rot":0,"paragraphs":[{"text":"샘플","szPt":37.15},{"text":"","szPt":37.15}]},{"x":1194.6666666666667,"y":1305.3333333333333,"w":69.333333333333329,"h":212,"rot":0,"paragraphs":[{"text":"샘플","szPt":37.15},{"text":"","szPt":37.15}]},{"x":1332,"y":1305.3333333333333,"w":69.333333333333329,"h":212,"rot":0,"paragraphs":[{"text":"샘플","szPt":37.15},{"text":"","szPt":37.15}]},{"x":1444,"y":1050.6666666666667,"w":93.333333333333329,"h":61.333333333333336,"rot":0,"paragraphs":[{"text":"견본","szPt":30.95}]},{"x":293.33333333333331,"y":981.33333333333337,"w":345.33333333333331,"h":73.333333333333329,"rot":306.97245,"paragraphs":[{"text":"알맹이","szPt":37.15}]},{"x":2612.0,"y":1608,"w":274.66666666666669,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"기계팀 선반","szPt":37.15}]},{"x":2821.3333333333335,"y":1213.3333333333333,"w":274.66666666666669,"h":73.333333333333329,"rot":0,"paragraphs":[{"text":"기계팀 선반","szPt":37.15}]},{"x":2964.0,"y":1352,"w":81.333333333333329,"h":189.33333333333334,"rot":0,"paragraphs":[{"text":"기계팀 선반","szPt":37.15}]},{"x":688,"y":926.66666666666663,"w":62.666666666666664,"h":252,"rot":0,"paragraphs":[{"text":"작업대","szPt":23.88}]}],"doorIcons":{}}
 
@@ -1110,7 +1122,7 @@
   function openCell(p, index){
     var data = stock.shelves[p.id];
     var g = gridOf(p, data);
-    active = { mode:'cell', collection:'shelves', id:p.id, index:index };
+    active = { mode:'cell', collection:'shelves', id:p.id, index:index, label:(p.label || '선반'), before: cellItems(g.cells[index]) };
     modalTitle.textContent = (p.label || '선반') + ' · ' + (Math.floor(index/g.cols)+1) + '단 ' + (index % g.cols + 1) + '칸';
     addRowBtn.hidden = false;
     clearBtn.hidden = false;
@@ -1126,7 +1138,7 @@
   }
 
   function openList(p){
-    active = { mode:'list', collection:'pallets', id:p.id };
+    active = { mode:'list', collection:'pallets', id:p.id, label:(p.label || '팔레트'), before: palletItems(p) };
     modalTitle.textContent = (p.label || '팔레트') + (p.members && p.members.length > 1 ? ' (팔레트 ' + p.members.length + '개)' : '');
     addRowBtn.hidden = false;
     clearBtn.hidden = true;
@@ -1142,15 +1154,17 @@
   saveBtn.addEventListener('click', function(){
     if (!active || !canEdit()) return;
     if (!db){ saveState.textContent = '저장이 지원되지 않아요'; return; }
-    var target = active, rows = readRows(), payload;
+    var target = active, rows = readRows(), payload, loc;
     if (target.mode === 'cell'){
       // read-modify-write the whole grid: only this one cell changes, and `cols` is carried
       // through so a shelf that has never been saved keeps the 칸 수 it was drawn with.
       var g = gridOf(shelfIndex[target.id], stock.shelves[target.id]);
       g.cells[target.index] = rows.length ? rows : null;
       payload = { cols: g.cols, cells: g.cells, updatedAt: Date.now() };
+      loc = target.label + ' ' + (Math.floor(target.index/g.cols)+1) + '단 ' + (target.index % g.cols + 1) + '칸';
     } else {
       payload = { items: rows, updatedAt: Date.now() };
+      loc = target.label;
     }
     saveBtn.disabled = true;
     saveState.textContent = '저장 중…';
@@ -1161,6 +1175,8 @@
       : payload;
     db.doc(target.collection + '/' + target.id).set(firePayload).then(function(){
       saveBtn.disabled = false;
+      logChange({ collection: target.collection, docId: target.id, location: loc, action: target.mode,
+        before: summarizeItems(target.before), after: summarizeItems(rows) });
       if (active !== target) return;
       if (target.mode === 'cell') closeModal();
       else saveState.textContent = '저장됨';
@@ -1174,9 +1190,29 @@
   // blank row, so the cell is written as null.
   clearBtn.addEventListener('click', function(){ if (!canEdit()) return; renderRows([]); saveBtn.click(); });
 
+  // ---- audit log: who changed what, visible only to 2단계 관리자 (see openAuditModal below) ----
+  function summarizeItems(items){
+    if (!items || !items.length) return '(비어있음)';
+    return items.map(function(it){ return (it.name || '(이름 없음)') + (it.qty ? '×' + it.qty : ''); }).join(', ');
+  }
+  function logChange(entry){
+    if (!db || !myEmail) return;
+    db.collection('auditLog').add({
+      by: myEmail,
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      collection: entry.collection,
+      docId: entry.docId,
+      location: entry.location,
+      action: entry.action,
+      before: entry.before,
+      after: entry.after
+    }).catch(function(){ /* the save itself already went through; a missed log entry isn't worth surfacing */ });
+  }
+
   function setCols(p, cols){
     if (!db || !canResize() || cols < 1 || cols > MAX_COLS) return;
     var g = gridOf(p, stock.shelves[p.id]);
+    var beforeCols = g.cols;
     var next = [];
     for (var r = 0; r < GRID_ROWS; r++)
       for (var c = 0; c < cols; c++)
@@ -1186,7 +1222,11 @@
     // round through the snapshot; the listener overwrites this with the stored copy either way.
     stock.shelves[p.id] = payload;
     refresh();
-    db.doc('shelves/' + p.id).set({ cols: cols, cells: next.map(packCell), updatedAt: payload.updatedAt });
+    db.doc('shelves/' + p.id).set({ cols: cols, cells: next.map(packCell), updatedAt: payload.updatedAt })
+      .then(function(){
+        logChange({ collection:'shelves', docId:p.id, location:(p.label || '선반'), action:'cols',
+          before: beforeCols + '칸', after: cols + '칸' });
+      });
   }
 
   // ---- 재고 현황 tab: every location as a card, shelves drawn as their own 2 x N cell grid ----
@@ -1506,11 +1546,47 @@
       });
   });
 
+  var auditBackdrop = document.getElementById('auditBackdrop');
+  var auditClose = document.getElementById('auditClose');
+  var auditList = document.getElementById('auditList');
+  function closeAuditModal(){ auditBackdrop.hidden = true; }
+  auditClose.addEventListener('click', closeAuditModal);
+  auditBackdrop.addEventListener('click', function(e){ if (e.target === auditBackdrop) closeAuditModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !auditBackdrop.hidden) closeAuditModal(); });
+
+  function openAuditModal(){
+    auditList.innerHTML = '';
+    auditList.appendChild(h('div', 'list-empty', '불러오는 중…'));
+    auditBackdrop.hidden = false;
+    db.collection('auditLog').orderBy('ts', 'desc').limit(200).get().then(function(snap){
+      auditList.innerHTML = '';
+      if (snap.empty){ auditList.appendChild(h('div', 'list-empty', '기록이 없어요')); return; }
+      var list = h('div', 'list-items');
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var when = (d.ts && d.ts.toDate) ? d.ts.toDate().toLocaleString('ko-KR') : '';
+        var row = h('div', 'list-item');
+        row.appendChild(h('span', null, (d.by || '') + ' · ' + (d.location || '') + ' · ' + d.before + ' → ' + d.after));
+        row.appendChild(h('span', 'sub', when));
+        list.appendChild(row);
+      });
+      auditList.appendChild(list);
+    }).catch(function(){
+      auditList.innerHTML = '';
+      auditList.appendChild(h('div', 'list-empty', '불러오지 못했어요'));
+    });
+  }
+
   function renderAuthBox(){
     authBox.innerHTML = '';
     if (myEmail){
       var tierLabel = myTier === 2 ? '2단계 관리자' : (myTier === 1 ? '1단계 관리자' : '권한 없음');
       authBox.appendChild(h('span', null, myEmail + ' · ' + tierLabel));
+      if (myTier === 2){
+        var logBtn = h('button', 'auth-link', '변경 이력'); logBtn.type = 'button';
+        logBtn.addEventListener('click', openAuditModal);
+        authBox.appendChild(logBtn);
+      }
       var out = h('button', 'auth-link', '로그아웃'); out.type = 'button';
       out.addEventListener('click', function(){ auth.signOut(); });
       authBox.appendChild(out);

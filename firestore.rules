@@ -27,5 +27,16 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isTier1();
     }
+
+    // an immutable trail of who changed what -- only 2단계 관리자 can read it, anyone tier 1+
+    // can append an entry (right after a save they were already allowed to make), and `by`/`ts`
+    // must be their own identity/the server clock, not whatever the client claims.
+    match /auditLog/{logId} {
+      allow read: if isTier2();
+      allow create: if isTier1()
+        && request.resource.data.by == request.auth.token.email
+        && request.resource.data.ts == request.time;
+      allow update, delete: if false;
+    }
   }
 }
