@@ -922,6 +922,11 @@
     if (!cell) return [];
     return (Array.isArray(cell) ? cell : [cell]).filter(filled);
   }
+  // Firestore rejects an array nested directly inside another array -- a cell holding several
+  // products is exactly that (cells: [ [itemA, itemB], null, ... ]) -- so a multi-item cell is
+  // wrapped in a plain object going out and unwrapped coming back, only at the Firestore boundary.
+  function packCell(cell){ return Array.isArray(cell) ? { list: cell } : cell; }
+  function unpackCell(cell){ return (cell && cell.list) ? cell.list : cell; }
   function cellCount(cells){
     return cells.reduce(function(sum, c){ return sum + cellItems(c).length; }, 0);
   }
@@ -1098,7 +1103,10 @@
     saveState.textContent = '저장 중…';
     stock[target.collection][target.id] = payload;   // show it immediately; the listener confirms
     refresh();
-    db.doc(target.collection + '/' + target.id).set(payload).then(function(){
+    var firePayload = target.mode === 'cell'
+      ? { cols: payload.cols, cells: payload.cells.map(packCell), updatedAt: payload.updatedAt }
+      : payload;
+    db.doc(target.collection + '/' + target.id).set(firePayload).then(function(){
       saveBtn.disabled = false;
       if (active !== target) return;
       if (target.mode === 'cell') closeModal();
@@ -1125,7 +1133,7 @@
     // round through the snapshot; the listener overwrites this with the stored copy either way.
     stock.shelves[p.id] = payload;
     refresh();
-    db.doc('shelves/' + p.id).set(payload);
+    db.doc('shelves/' + p.id).set({ cols: cols, cells: next.map(packCell), updatedAt: payload.updatedAt });
   }
 
   // ---- 재고 현황 tab: every location as a card, shelves drawn as their own 2 x N cell grid ----
@@ -1412,7 +1420,12 @@
   ['shelves', 'pallets'].forEach(function(collection){
     db.collection(collection).onSnapshot(function(snap){
       var next = {};
-      snap.docs.forEach(function(doc){ next[doc.id] = doc.data() || {}; });
+      snap.docs.forEach(function(doc){
+        var data = doc.data() || {};
+        if (collection === 'shelves' && Array.isArray(data.cells))
+          data = { cols: data.cols, cells: data.cells.map(unpackCell), updatedAt: data.updatedAt };
+        next[doc.id] = data;
+      });
       stock[collection] = next;
       refresh();
     }, function(){ /* live updates unavailable; the view just won't refresh on its own */ });
