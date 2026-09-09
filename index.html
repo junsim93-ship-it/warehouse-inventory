@@ -303,7 +303,7 @@
 
   <div id="panelStock" role="tabpanel" aria-labelledby="tabStock" hidden>
     <div class="stock-bar">
-      <input type="search" id="stockSearch" placeholder="선반 이름 · 제품명 검색" aria-label="검색">
+      <input type="search" id="stockSearch" placeholder="선반 이름 · 제품명 · 로트번호 검색" aria-label="검색">
       <label class="stock-toggle"><input type="checkbox" id="showEmpty" checked> 빈 위치도 보기</label>
       <button type="button" class="filter-chip" id="lowStockChip" hidden>⚠ 재고 부족만 보기<span aria-hidden="true"> ✕</span></button>
       <span class="stock-summary" id="stockSummary"></span>
@@ -1538,10 +1538,15 @@
     return (a.label || '').localeCompare(b.label || '', 'ko', { numeric:true });
   }
 
+  function itemMatchesQuery(it, q){
+    return (it.name || '').toLowerCase().indexOf(q) !== -1 ||
+      (it.lot || '').toLowerCase().indexOf(q) !== -1;
+  }
+
   function matches(q, label, entries){
     if (!q) return true;
     if ((label || '').toLowerCase().indexOf(q) !== -1) return true;
-    return entries.some(function(c){ return filled(c) && (c.name || '').toLowerCase().indexOf(q) !== -1; });
+    return entries.some(function(c){ return filled(c) && itemMatchesQuery(c, q); });
   }
 
   function renderStock(){
@@ -1558,7 +1563,7 @@
       return items.filter(function(it){
         if (!filled(it)) return false;
         if (lowStockOnly && !isLowStock(it)) return false;
-        if (q && (it.name || '').toLowerCase().indexOf(q) === -1) return false;
+        if (q && !itemMatchesQuery(it, q)) return false;
         return true;
       }).length;
     }
@@ -1566,7 +1571,7 @@
     // (검색어가 같이 입력돼 있으면 그 제품명과도 일치해야 한다).
     function cardVisible(label, items){
       if (lowStockOnly){
-        return items.some(function(it){ return isLowStock(it) && (!q || (it.name || '').toLowerCase().indexOf(q) !== -1); });
+        return items.some(function(it){ return isLowStock(it) && (!q || itemMatchesQuery(it, q)); });
       }
       return matches(q, label, items);
     }
