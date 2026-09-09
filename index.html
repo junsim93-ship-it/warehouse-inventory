@@ -110,6 +110,9 @@
   .stat-chip b{ font-size:22px; font-weight:600; letter-spacing:-0.02em; }
   .stat-chip span{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; }
   .stat-chip-warn b{ color:var(--danger); }
+  .stat-chip-btn{ appearance:none; background:none; border:none; font:inherit; cursor:default; }
+  .stat-chip-btn:not(:disabled){ cursor:pointer; }
+  .stat-chip-btn:not(:disabled):hover b{ text-decoration:underline; }
 
   .legend{ display:flex; gap:22px; flex-wrap:wrap; margin-bottom:22px; padding:2px; }
   .legend-chip{ display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); }
@@ -201,6 +204,8 @@
   .stock-bar input[type="search"]:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak); }
   .stock-toggle{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); cursor:pointer; user-select:none; }
   .stock-summary{ margin-left:auto; font-size:12.5px; color:var(--muted); }
+  .filter-chip{ appearance:none; display:inline-flex; align-items:center; gap:4px; padding:6px 12px; border-radius:999px; border:1px solid var(--danger); background:none; color:var(--danger); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+  .filter-chip:hover{ filter:brightness(1.1); }
 
   .stock-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; align-items:start; }
   .stock-card{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--panel-raised); overflow:hidden; box-shadow:var(--shadow-sm); transition:box-shadow .2s ease, border-color .2s ease; }
@@ -300,6 +305,7 @@
     <div class="stock-bar">
       <input type="search" id="stockSearch" placeholder="선반 이름 · 제품명 검색" aria-label="검색">
       <label class="stock-toggle"><input type="checkbox" id="showEmpty" checked> 빈 위치도 보기</label>
+      <button type="button" class="filter-chip" id="lowStockChip" hidden>⚠ 재고 부족만 보기<span aria-hidden="true"> ✕</span></button>
       <span class="stock-summary" id="stockSummary"></span>
     </div>
     <div class="stock-grid" id="stockGrid"></div>
@@ -1285,6 +1291,13 @@
   var stockSearch = document.getElementById('stockSearch');
   var showEmptyEl = document.getElementById('showEmpty');
   var stockSummary = document.getElementById('stockSummary');
+  var lowStockChip = document.getElementById('lowStockChip');
+  var lowStockOnly = false;
+  lowStockChip.addEventListener('click', function(){
+    lowStockOnly = false;
+    lowStockChip.hidden = true;
+    renderStock();
+  });
 
   function setTab(name){
     Object.keys(panels).forEach(function(k){
@@ -1440,13 +1453,26 @@
     var showEmpty = showEmptyEl.checked;
     stockGrid.innerHTML = '';
     var shown = 0, products = 0, usedLocations = 0;
-    // while searching, the header should answer "그 제품이 어디에 몇 건 있는지" -- not the
-    // grand total -- so count separately how many locations/entries actually match the product
-    // name (not just a shelf label match, which only decides what stays visible below).
+    // while searching or filtering to just low-stock items, the header should answer "그 제품이
+    // 어디에 몇 건 있는지" -- not the grand total -- so count separately how many
+    // locations/entries actually match, instead of always showing the site-wide totals.
     var qLocations = 0, qEntries = 0;
-    function countNameHits(items){
-      if (!q) return 0;
-      return items.filter(function(it){ return filled(it) && (it.name || '').toLowerCase().indexOf(q) !== -1; }).length;
+    function countHits(items){
+      if (!q && !lowStockOnly) return 0;
+      return items.filter(function(it){
+        if (!filled(it)) return false;
+        if (lowStockOnly && !isLowStock(it)) return false;
+        if (q && (it.name || '').toLowerCase().indexOf(q) === -1) return false;
+        return true;
+      }).length;
+    }
+    // 재고 부족 필터가 켜져 있으면 위치 이름 매치는 무시하고, 부족한 제품을 가진 위치만 보여준다
+    // (검색어가 같이 입력돼 있으면 그 제품명과도 일치해야 한다).
+    function cardVisible(label, items){
+      if (lowStockOnly){
+        return items.some(function(it){ return isLowStock(it) && (!q || (it.name || '').toLowerCase().indexOf(q) !== -1); });
+      }
+      return matches(q, label, items);
     }
 
     groups.shelf.slice().sort(byShelfOrder).forEach(function(p){
@@ -1454,9 +1480,9 @@
       var items = cells.reduce(function(acc, c){ return acc.concat(cellItems(c)); }, []);
       products += items.length;
       if (items.length) usedLocations++;
-      var hits = countNameHits(items);
+      var hits = countHits(items);
       if (hits){ qLocations++; qEntries += hits; }
-      if ((!items.length && !showEmpty) || !matches(q, p.label, items)) return;
+      if ((!items.length && !showEmpty) || !cardVisible(p.label, items)) return;
       stockGrid.appendChild(shelfCard(p));
       shown++;
     });
@@ -1467,9 +1493,9 @@
       var items = palletItems(p);
       products += items.length;
       if (items.length) usedLocations++;
-      var hits = countNameHits(items);
+      var hits = countHits(items);
       if (hits){ qLocations++; qEntries += hits; }
-      if ((!items.length && !showEmpty) || !matches(q, p.label, items)) return;
+      if ((!items.length && !showEmpty) || !cardVisible(p.label, items)) return;
       stockGrid.appendChild(palletCard(p));
       shown++;
     });
@@ -1477,8 +1503,8 @@
     if (!shown){
       stockGrid.appendChild(h('div', 'stock-blank', db ? '조건에 맞는 위치가 없어요' : '이 미리보기에서는 저장된 재고를 불러올 수 없어요'));
     }
-    stockSummary.textContent = q
-      ? '검색 결과 · 위치 ' + qLocations + '곳 · 제품 ' + qEntries + '건'
+    stockSummary.textContent = (q || lowStockOnly)
+      ? (lowStockOnly ? '재고 부족 · ' : '검색 결과 · ') + '위치 ' + qLocations + '곳 · 제품 ' + qEntries + '건'
       : '위치 ' + usedLocations + '곳 · 제품 ' + products + '건';
   }
   stockSearch.addEventListener('input', renderStock);
@@ -1566,9 +1592,19 @@
     chip.className = 'stat-chip';
     chip.innerHTML = '<b class="num">' + registered + ' / ' + totalLocations + '</b><span>위치 등록됨</span>';
     statsRow.appendChild(chip);
-    var lowChip = document.createElement('div');
-    lowChip.className = 'stat-chip' + (low ? ' stat-chip-warn' : '');
+    var lowChip = document.createElement('button');
+    lowChip.type = 'button';
+    lowChip.className = 'stat-chip stat-chip-btn' + (low ? ' stat-chip-warn' : '');
+    lowChip.disabled = !low;
     lowChip.innerHTML = '<b class="num">' + low + '</b><span>재고 부족</span>';
+    lowChip.addEventListener('click', function(){
+      if (!low) return;
+      lowStockOnly = true;
+      stockSearch.value = '';
+      lowStockChip.hidden = false;
+      setTab('stock');
+      renderStock();
+    });
     statsRow.appendChild(lowChip);
   }
 
