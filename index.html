@@ -156,8 +156,14 @@
   .modal-close:hover{ background:var(--hairline); color:var(--text); }
   .modal-close:active{ transform:scale(.92); }
   .modal-body{ padding:14px 26px 24px; }
-  #itemScroll{ overflow-x:auto; padding-bottom:2px; }
-  .item-row{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 64px 150px 112px 32px; gap:10px; margin-bottom:10px; align-items:center; min-width:max-content; }
+  /* labels + every item row are flattened (display:contents) into ONE grid on #itemScroll, so
+     the browser sizes each column from every row's cells together -- if each row kept its own
+     grid, an <input>'s intrinsic width vs. a label <span>'s could resolve the shared 1fr column
+     to different pixel widths per row and throw the columns out of alignment. */
+  #itemScroll{ overflow-x:auto; padding-bottom:2px; display:grid; grid-template-columns: minmax(120px,1fr) 64px 64px 150px 112px 32px; gap:10px; align-items:center; }
+  .col-labels{ display:contents; }
+  #itemRows{ display:contents; }
+  .item-row{ display:contents; }
   .item-row input{ min-width:0; width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); color:var(--text); font-size:14px; transition:border-color .12s ease, box-shadow .12s ease; }
   .item-row input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak); }
   .item-row input[type="date"]{ font-size:13px; color-scheme:light dark; }
@@ -174,7 +180,7 @@
   .save-btn:hover{ filter:brightness(1.08); }
   .save-btn:active{ transform:scale(.96); }
   .save-btn:disabled{ opacity:.5; cursor:default; }
-  .col-labels{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 64px 150px 112px 32px; gap:10px; font-size:11.5px; font-weight:600; letter-spacing:.03em; color:var(--muted); padding:0 0 10px; min-width:max-content; text-transform:uppercase; }
+  .col-labels span{ font-size:11.5px; font-weight:600; letter-spacing:.03em; color:var(--muted); text-transform:uppercase; }
   /* single-cell mode has exactly one row and its own 비우기 button, so the per-row delete is
      redundant there -- hidden rather than removed so the grid columns still line up. */
   #itemRows[data-mode="cell"] .item-row > button{ visibility:hidden; }
