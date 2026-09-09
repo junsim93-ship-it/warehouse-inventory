@@ -206,6 +206,7 @@
   .stock-summary{ margin-left:auto; font-size:12.5px; color:var(--muted); }
   .filter-chip{ appearance:none; display:inline-flex; align-items:center; gap:4px; padding:6px 12px; border-radius:999px; border:1px solid var(--danger); background:none; color:var(--danger); font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; }
   .filter-chip:hover{ filter:brightness(1.1); }
+  .filter-chip[aria-pressed="true"]{ background:var(--danger); color:#fff; }
 
   .stock-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; align-items:start; }
   .stock-card{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--panel-raised); overflow:hidden; box-shadow:var(--shadow-sm); transition:box-shadow .2s ease, border-color .2s ease; }
@@ -305,7 +306,7 @@
     <div class="stock-bar">
       <input type="search" id="stockSearch" placeholder="선반 이름 · 제품명 · 로트번호 검색" aria-label="검색">
       <label class="stock-toggle"><input type="checkbox" id="showEmpty" checked> 빈 위치도 보기</label>
-      <button type="button" class="filter-chip" id="lowStockChip" hidden>⚠ 재고 부족만 보기<span aria-hidden="true"> ✕</span></button>
+      <button type="button" class="filter-chip" id="lowStockChip" aria-pressed="false">⚠ 재고 부족만 보기</button>
       <span class="stock-summary" id="stockSummary"></span>
     </div>
     <div class="stock-grid" id="stockGrid"></div>
@@ -1389,9 +1390,12 @@
   var stockSummary = document.getElementById('stockSummary');
   var lowStockChip = document.getElementById('lowStockChip');
   var lowStockOnly = false;
+  function syncLowStockChip(){
+    lowStockChip.setAttribute('aria-pressed', String(lowStockOnly));
+  }
   lowStockChip.addEventListener('click', function(){
-    lowStockOnly = false;
-    lowStockChip.hidden = true;
+    lowStockOnly = !lowStockOnly;
+    syncLowStockChip();
     renderStock();
   });
 
@@ -1702,7 +1706,7 @@
       if (!low) return;
       lowStockOnly = true;
       stockSearch.value = '';
-      lowStockChip.hidden = false;
+      syncLowStockChip();
       setTab('stock');
       renderStock();
     });
