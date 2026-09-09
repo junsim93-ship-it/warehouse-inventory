@@ -1099,7 +1099,7 @@
     qtyInput.value = qty || '';
     var thresholdInput = document.createElement('input');
     thresholdInput.type = 'text'; thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
-    thresholdInput.title = '같은 제품명+로트번호는 모든 위치 수량을 합쳐서 이 기준과 비교해요. 한 곳에만 입력해도 적용돼요.';
+    thresholdInput.title = '같은 제품명+로트번호는 모든 위치 수량을 합쳐서 이 기준과 비교해요. 저장하면 같은 제품/로트를 가진 다른 위치의 기준수량도 이 값으로 자동으로 맞춰져요.';
     thresholdInput.value = threshold || '';
     var expiryInput = document.createElement('input');
     expiryInput.type = 'date'; expiryInput.title = '유통기한';
@@ -1206,6 +1206,71 @@
     backdrop.hidden = false;
   }
 
+  // 저장하는 위치에 기준수량이 입력돼 있으면, 같은 제품명+로트번호를 가진 다른 모든 위치의
+  // 기준수량도 같은 값으로 맞춰 같은 배치에 함께 저장한다 -- 위치마다 다른 값이 남아 있으면
+  // 재고 부족 판정이 어느 쪽 기준을 따르는지 알 수 없어지므로, 애초에 서로 달라질 수 없게 한다.
+  // ponytail: 지금 저장 중인 위치 자체는 스캔 대상에서 제외한다 (그 위치는 rows로 이미 반영됨) --
+  // 같은 선반의 다른 칸에 같은 제품/로트가 또 있다면 이번 배치엔 안 실리고, 다음 저장 때 맞춰진다.
+  function collectThresholdSyncs(rows, batch, skipCollection, skipId){
+    var updates = {};
+    rows.forEach(function(it){
+      if (!filled(it) || !it.name || !it.threshold) return;
+      var t = parseInt(it.threshold, 10);
+      if (!isNaN(t)) updates[lowStockKey(it)] = String(t);
+    });
+    if (!Object.keys(updates).length) return [];
+
+    function syncItems(items){
+      var changed = false;
+      var next = items.map(function(it){
+        var want = updates[lowStockKey(it)];
+        if (want === undefined || String(it.threshold || '') === want) return it;
+        changed = true;
+        var copy = {};
+        for (var k in it) copy[k] = it[k];
+        copy.threshold = want;
+        return copy;
+      });
+      return changed ? next : null;
+    }
+
+    var synced = [];
+    groups.shelf.forEach(function(p){
+      if (skipCollection === 'shelves' && skipId === p.id) return;
+      var g = gridOf(p, stock.shelves[p.id]);
+      var before = [], after = [], changed = false;
+      var newCells = g.cells.map(function(cell){
+        var items = cellItems(cell);
+        if (!items.length) return cell;
+        var next = syncItems(items);
+        if (!next) return cell;
+        changed = true;
+        before = before.concat(items);
+        after = after.concat(next);
+        return next;
+      });
+      if (!changed) return;
+      var updatedAt = Date.now();
+      stock.shelves[p.id] = { cols: g.cols, cells: newCells, updatedAt: updatedAt };
+      batch.set(db.doc('shelves/' + p.id), { cols: g.cols, cells: newCells.map(packCell), updatedAt: updatedAt });
+      synced.push({ collection: 'shelves', id: p.id, label: p.label || '선반', before: before, after: after });
+    });
+
+    palletUnits.forEach(function(p){
+      if (skipCollection === 'pallets' && skipId === p.id) return;
+      var items = palletItems(p);
+      if (!items.length) return;
+      var next = syncItems(items);
+      if (!next) return;
+      var updatedAt = Date.now();
+      stock.pallets[p.id] = { items: next, updatedAt: updatedAt };
+      batch.set(db.doc('pallets/' + p.id), { items: next, updatedAt: updatedAt });
+      synced.push({ collection: 'pallets', id: p.id, label: p.label || '팔레트', before: items, after: next });
+    });
+
+    return synced;
+  }
+
   saveBtn.addEventListener('click', function(){
     if (!active || !canEdit()) return;
     if (!db){ saveState.textContent = '저장이 지원되지 않아요'; return; }
@@ -1224,14 +1289,21 @@
     saveBtn.disabled = true;
     saveState.textContent = '저장 중…';
     stock[target.collection][target.id] = payload;   // show it immediately; the listener confirms
-    refresh();
     var firePayload = target.mode === 'cell'
       ? { cols: payload.cols, cells: payload.cells.map(packCell), updatedAt: payload.updatedAt }
       : payload;
-    db.doc(target.collection + '/' + target.id).set(firePayload).then(function(){
+    var batch = db.batch();
+    batch.set(db.doc(target.collection + '/' + target.id), firePayload);
+    var synced = collectThresholdSyncs(rows, batch, target.collection, target.id);
+    refresh();
+    batch.commit().then(function(){
       saveBtn.disabled = false;
       logChange({ collection: target.collection, docId: target.id, location: loc, action: target.mode,
         before: summarizeItems(target.before), after: summarizeItems(rows) });
+      synced.forEach(function(s){
+        logChange({ collection: s.collection, docId: s.id, location: s.label, action: 'threshold-sync',
+          before: summarizeItems(s.before), after: summarizeItems(s.after) });
+      });
       if (active !== target) return;
       if (target.mode === 'cell') closeModal();
       else saveState.textContent = '저장됨';
