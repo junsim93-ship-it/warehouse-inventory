@@ -843,19 +843,26 @@
     var lines, lineHeights;
     if (isVerticalLabel){
       groupRotation = 0;
-      // keep the spaces (as their own entries) instead of dropping them, so a stacked label
-      // like "임가공 선반 2" still shows a visible break where the word boundary was -- just a
-      // smaller gap than a full character, not a blank glyph-sized line.
-      var chars = displayText.split('');
+      // stack whole WORDS top to bottom, not individual characters -- "부자재 선반 1" reads as
+      // "부자재" / "선반 1", not six single-glyph rungs. Only a word too wide for the column on
+      // its own still falls back to a per-character split, so nothing overflows the box.
+      var words = displayText.split(' ').filter(function(w){ return w.length > 0; });
       var availableH = axisAligned ? (bbox.maxY - bbox.minY) : box.h;
-      var totalH = function(fp){
-        return chars.reduce(function(sum, c){ return sum + (c === ' ' ? fp*0.55 : fp*1.12); }, 0);
+      var availableW = axisAligned ? (bbox.maxX - bbox.minX) : box.w;
+      var linesFor = function(fp){
+        var out = [];
+        words.forEach(function(w){
+          if (measure(w, fp) <= availableW * 0.94){ out.push(w); return; }
+          w.split('').forEach(function(c){ out.push(c); });
+        });
+        return out;
       };
-      while (totalH(fontPx) > availableH * 0.94 && fontPx > minFontPx){
+      lines = linesFor(fontPx);
+      while (lines.length * fontPx * 1.12 > availableH * 0.94 && fontPx > minFontPx){
         fontPx *= 0.9;
+        lines = linesFor(fontPx);
       }
-      lines = chars;
-      lineHeights = chars.map(function(c){ return c === ' ' ? fontPx*0.55 : fontPx*1.12; });
+      lineHeights = lines.map(function(){ return fontPx*1.12; });
     } else {
       // shrink narrow labels further until they fit in 2 lines, instead of one fixed size
       // that's fine for wide boxes but wraps narrow ones into 3+ lines.
