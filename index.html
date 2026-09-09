@@ -1096,10 +1096,12 @@
     nameInput.type = 'text'; nameInput.placeholder = '제품명';
     nameInput.value = name || '';
     var qtyInput = document.createElement('input');
-    qtyInput.type = 'text'; qtyInput.className = 'qty-input'; qtyInput.placeholder = '수량';
+    qtyInput.type = 'number'; qtyInput.min = '0'; qtyInput.step = '1';
+    qtyInput.className = 'qty-input'; qtyInput.placeholder = '수량';
     qtyInput.value = qty || '';
     var thresholdInput = document.createElement('input');
-    thresholdInput.type = 'text'; thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
+    thresholdInput.type = 'number'; thresholdInput.min = '0'; thresholdInput.step = '1';
+    thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
     thresholdInput.title = '같은 제품명+로트번호는 모든 위치 수량을 합쳐서 이 기준과 비교해요. 저장하면 같은 제품/로트를 가진 다른 위치의 기준수량도 이 값으로 자동으로 맞춰져요.';
     thresholdInput.value = threshold || '';
     var expiryInput = document.createElement('input');
@@ -1298,6 +1300,8 @@
   saveBtn.addEventListener('click', function(){
     if (!active || !canEdit()) return;
     if (!db){ saveState.textContent = '저장이 지원되지 않아요'; return; }
+    var badInput = Array.prototype.find.call(itemRowsEl.querySelectorAll('.qty-input'), function(inp){ return !inp.checkValidity(); });
+    if (badInput){ badInput.reportValidity(); return; }
     var target = active, rows = normalizeThresholds(readRows()), payload, loc;
     if (target.mode === 'cell'){
       // read-modify-write the whole grid: only this one cell changes, and `cols` is carried
