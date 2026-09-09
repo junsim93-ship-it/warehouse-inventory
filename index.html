@@ -1309,6 +1309,7 @@
       payload = { items: rows, updatedAt: Date.now() };
       loc = target.label;
     }
+    if (!window.confirm(loc + ' 재고를 저장할까요?')) return;
     saveBtn.disabled = true;
     saveState.textContent = '저장 중…';
     stock[target.collection][target.id] = payload;   // show it immediately; the listener confirms
