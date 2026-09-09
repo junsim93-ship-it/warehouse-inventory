@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function roleTier() {
+      return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier;
+    }
+    function isTier1() { return request.auth != null && roleTier() >= 1; }
+    function isTier2() { return request.auth != null && roleTier() >= 2; }
+
+    // each admin can read only their own role doc; roles are assigned by hand in the console,
+    // never written from the client.
+    match /roles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /shelves/{shelfId} {
+      allow read: if true;
+      // 1단계: can register/edit/delete products in a shelf's cells, but not resize it --
+      // `cols` must stay whatever it already was (or whatever the doc is first created with).
+      allow write: if isTier1() && (resource == null || request.resource.data.cols == resource.data.cols);
+      allow write: if isTier2();
+    }
+
+    match /pallets/{palletId} {
+      allow read: if true;
+      allow write: if isTier1();
+    }
+  }
+}
