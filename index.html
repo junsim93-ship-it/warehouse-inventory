@@ -109,6 +109,7 @@
   .stat-chip{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; padding:2px 0 2px 28px; }
   .stat-chip b{ font-size:22px; font-weight:600; letter-spacing:-0.02em; }
   .stat-chip span{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; }
+  .stat-chip-warn b{ color:var(--danger); }
 
   .legend{ display:flex; gap:22px; flex-wrap:wrap; margin-bottom:22px; padding:2px; }
   .legend-chip{ display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); }
@@ -156,7 +157,7 @@
   .modal-close:active{ transform:scale(.92); }
   .modal-body{ padding:14px 26px 24px; }
   #itemRows{ overflow-x:auto; padding-bottom:2px; }
-  .item-row{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 150px 112px 32px; gap:10px; margin-bottom:10px; align-items:center; min-width:max-content; }
+  .item-row{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 64px 150px 112px 32px; gap:10px; margin-bottom:10px; align-items:center; min-width:max-content; }
   .item-row input{ min-width:0; width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); color:var(--text); font-size:14px; transition:border-color .12s ease, box-shadow .12s ease; }
   .item-row input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-weak); }
   .item-row input[type="date"]{ font-size:13px; color-scheme:light dark; }
@@ -173,7 +174,7 @@
   .save-btn:hover{ filter:brightness(1.08); }
   .save-btn:active{ transform:scale(.96); }
   .save-btn:disabled{ opacity:.5; cursor:default; }
-  .col-labels{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 150px 112px 32px; gap:10px; font-size:11.5px; font-weight:600; letter-spacing:.03em; color:var(--muted); padding:0 0 10px; min-width:max-content; text-transform:uppercase; }
+  .col-labels{ display:grid; grid-template-columns: minmax(120px,1fr) 64px 64px 150px 112px 32px; gap:10px; font-size:11.5px; font-weight:600; letter-spacing:.03em; color:var(--muted); padding:0 0 10px; min-width:max-content; text-transform:uppercase; }
   /* single-cell mode has exactly one row and its own 비우기 button, so the per-row delete is
      redundant there -- hidden rather than removed so the grid columns still line up. */
   #itemRows[data-mode="cell"] .item-row > button{ visibility:hidden; }
@@ -225,6 +226,7 @@
   .cell .sub{ font-size:11px; color:var(--muted); font-family:"IBM Plex Mono","Noto Sans KR",monospace; }
   .cell .exp-warn{ color:var(--warn); font-weight:600; }
   .cell .exp-over{ color:var(--danger); font-weight:600; }
+  .stock-low{ color:var(--danger); font-weight:600; }
 
   .list-items{ border-top:1px solid var(--hairline); }
   .list-item{ display:flex; align-items:baseline; gap:10px; padding:9px 16px; border-bottom:1px solid var(--hairline); font-size:13px; }
@@ -305,7 +307,7 @@
       <button class="modal-close" id="modalClose" aria-label="닫기">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="col-labels"><span>제품명</span><span>수량</span><span>유통기한</span><span>로트번호</span><span></span></div>
+      <div class="col-labels"><span>제품명</span><span>수량</span><span>기준수량</span><span>유통기한</span><span>로트번호</span><span></span></div>
       <div id="itemRows"></div>
       <button class="add-row" id="addRow" type="button">+ 제품 추가</button>
     </div>
@@ -964,7 +966,7 @@
   var shelfIndex = {};
   groups.shelf.forEach(function(p){ shelfIndex[p.id] = p; });
 
-  function filled(it){ return !!(it && (it.name || it.qty || it.expiry || it.lot)); }
+  function filled(it){ return !!(it && (it.name || it.qty || it.threshold || it.expiry || it.lot)); }
 
   // a cell holds a LIST of products, not just one. Saves written before that change stored a
   // single object per cell, so always read a cell through here rather than using cells[i] raw.
@@ -1038,7 +1040,15 @@
     return days < 0 ? 'exp-over' : (days <= 30 ? 'exp-warn' : '');
   }
 
-  function makeRow(name, qty, expiry, lot){
+  // 기준수량이 정해져 있고 현재 수량이 그 이하로 내려가면 재고 부족 -- 둘 다 앞자리 숫자를 읽을
+  // 수 있어야 판단 가능하다 ("10박스"처럼 단위가 붙어도 앞의 10은 그대로 읽힘).
+  function isLowStock(it){
+    if (!it || !it.threshold) return false;
+    var q = parseInt(it.qty, 10), t = parseInt(it.threshold, 10);
+    return !isNaN(q) && !isNaN(t) && q <= t;
+  }
+
+  function makeRow(name, qty, threshold, expiry, lot){
     var row = document.createElement('div');
     row.className = 'item-row';
     var nameInput = document.createElement('input');
@@ -1047,6 +1057,10 @@
     var qtyInput = document.createElement('input');
     qtyInput.type = 'text'; qtyInput.className = 'qty-input'; qtyInput.placeholder = '수량';
     qtyInput.value = qty || '';
+    var thresholdInput = document.createElement('input');
+    thresholdInput.type = 'text'; thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
+    thresholdInput.title = '이 수량 이하로 떨어지면 재고 부족으로 표시돼요';
+    thresholdInput.value = threshold || '';
     var expiryInput = document.createElement('input');
     expiryInput.type = 'date'; expiryInput.title = '유통기한';
     expiryInput.value = expiry || '';
@@ -1056,11 +1070,11 @@
     var delBtn = document.createElement('button');
     delBtn.type = 'button'; delBtn.textContent = '−';
     delBtn.addEventListener('click', function(){ row.remove(); });
-    row.appendChild(nameInput); row.appendChild(qtyInput); row.appendChild(expiryInput); row.appendChild(lotInput); row.appendChild(delBtn);
+    row.appendChild(nameInput); row.appendChild(qtyInput); row.appendChild(thresholdInput); row.appendChild(expiryInput); row.appendChild(lotInput); row.appendChild(delBtn);
     return row;
   }
 
-  addRowBtn.addEventListener('click', function(){ itemRowsEl.appendChild(makeRow('', '', '', '')); });
+  addRowBtn.addEventListener('click', function(){ itemRowsEl.appendChild(makeRow('', '', '', '', '')); });
 
   // visitors (myTier 0) can open a cell/pallet to look, but never change it -- inputs go
   // read-only and the buttons that write (add/save/clear/per-row delete) disappear. This is
@@ -1081,16 +1095,17 @@
       return {
         name: inputs[0].value.trim(),
         qty: inputs[1].value.trim(),
-        expiry: inputs[2].value.trim(),
-        lot: inputs[3].value.trim()
+        threshold: inputs[2].value.trim(),
+        expiry: inputs[3].value.trim(),
+        lot: inputs[4].value.trim()
       };
-    }).filter(function(it){ return it.name || it.qty || it.expiry || it.lot; });
+    }).filter(function(it){ return it.name || it.qty || it.threshold || it.expiry || it.lot; });
   }
 
   function renderRows(items){
     itemRowsEl.innerHTML = '';
-    if (!items || !items.length){ itemRowsEl.appendChild(makeRow('', '', '', '')); return; }
-    items.forEach(function(it){ itemRowsEl.appendChild(makeRow(it.name, it.qty, it.expiry, it.lot)); });
+    if (!items || !items.length){ itemRowsEl.appendChild(makeRow('', '', '', '', '')); return; }
+    items.forEach(function(it){ itemRowsEl.appendChild(makeRow(it.name, it.qty, it.threshold, it.expiry, it.lot)); });
   }
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -1270,7 +1285,8 @@
     if (items.length){
       items.forEach(function(it){
         var line = h('div', 'cell-item');
-        line.appendChild(h('span', 'nm', it.name || '(이름 없음)'));
+        var low = isLowStock(it);
+        line.appendChild(h('span', 'nm' + (low ? ' stock-low' : ''), (low ? '⚠ ' : '') + (it.name || '(이름 없음)')));
         var sub = [];
         if (it.qty) sub.push(it.qty);
         if (it.lot) sub.push(it.lot);
@@ -1351,7 +1367,8 @@
       var list = h('div', 'list-items');
       items.forEach(function(it){
         var row = h('div', 'list-item');
-        row.appendChild(h('span', null, it.name || '(이름 없음)'));
+        var low = isLowStock(it);
+        row.appendChild(h('span', low ? 'stock-low' : null, (low ? '⚠ ' : '') + (it.name || '(이름 없음)')));
         var sub = [];
         if (it.qty) sub.push(it.qty);
         if (it.lot) sub.push(it.lot);
@@ -1479,14 +1496,32 @@
   var statsRow = document.getElementById('statsRow');
   var totalLocations = groups.shelf.length + palletUnits.length;
 
+  function countLowStock(){
+    var n = 0;
+    groups.shelf.forEach(function(p){
+      gridOf(p, stock.shelves[p.id]).cells.forEach(function(c){
+        cellItems(c).forEach(function(it){ if (isLowStock(it)) n++; });
+      });
+    });
+    palletUnits.forEach(function(p){
+      palletItems(p).forEach(function(it){ if (isLowStock(it)) n++; });
+    });
+    return n;
+  }
+
   function renderStats(){
     var registered = groups.shelf.filter(function(p){ return countOf(p, 'shelves'); }).length
                    + palletUnits.filter(function(p){ return countOf(p, 'pallets'); }).length;
+    var low = countLowStock();
     statsRow.innerHTML = '';
     var chip = document.createElement('div');
     chip.className = 'stat-chip';
     chip.innerHTML = '<b class="num">' + registered + ' / ' + totalLocations + '</b><span>위치 등록됨</span>';
     statsRow.appendChild(chip);
+    var lowChip = document.createElement('div');
+    lowChip.className = 'stat-chip' + (low ? ' stat-chip-warn' : '');
+    lowChip.innerHTML = '<b class="num">' + low + '</b><span>재고 부족</span>';
+    statsRow.appendChild(lowChip);
   }
 
   function refresh(){
