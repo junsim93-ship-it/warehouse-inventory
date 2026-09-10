@@ -1778,15 +1778,19 @@ function App() {
           if (!proceed) return;
         }
 
-        /* 1) BOM 병합 (같은 id면 갱신, 없으면 추가) */
-        let bomAdded = 0, bomUpdated = 0;
-        const mergedBoms = [...boms];
-        (s.boms || []).forEach(b => {
-          const idx = mergedBoms.findIndex(x => x.id === b.id);
-          if (idx >= 0) { mergedBoms[idx] = b; bomUpdated++; }
-          else { mergedBoms.push(b); bomAdded++; }
-        });
-        persistBoms(mergedBoms);
+        /* 1) BOM 병합 (같은 id면 갱신, 없으면 추가) — BOM 추가/갱신은 2단계 로그인이 있어야 반영된다 */
+        let bomAdded = 0, bomUpdated = 0, bomSkipped = 0;
+        if (canEditBom) {
+          const mergedBoms = [...boms];
+          (s.boms || []).forEach(b => {
+            const idx = mergedBoms.findIndex(x => x.id === b.id);
+            if (idx >= 0) { mergedBoms[idx] = b; bomUpdated++; }
+            else { mergedBoms.push(b); bomAdded++; }
+          });
+          persistBoms(mergedBoms);
+        } else {
+          bomSkipped = (s.boms || []).length;
+        }
 
         /* 2) 현재 재고 데이터에 존재하는 로트 ID 집합 */
         const validLotIds = new Set();
@@ -1847,6 +1851,7 @@ function App() {
 
         const parts = [`발주 ${newLines.length}라인 추가`];
         if (bomAdded || bomUpdated) parts.push(`BOM 추가 ${bomAdded}·갱신 ${bomUpdated}`);
+        if (bomSkipped) parts.push(`BOM ${bomSkipped}개는 2단계 로그인 필요로 건너뜀`);
         if (manualKept) parts.push(`수동 배분 ${manualKept}건 복원`);
         if (manualDropped || (exIn.length - exValid.length) > 0) {
           parts.push(`로트 불일치로 ${manualDropped + (exIn.length - exValid.length)}건 제외`);
