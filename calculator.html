@@ -5,6 +5,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.25.6/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", sans-serif;
@@ -895,7 +897,18 @@ function App() {
     const unsubs = [];
     (async () => {
       let database = null;
-      try { database = await claude.use("db"); } catch (e) { /* db 미지원 환경 — 로컬 저장으로 동작 */ }
+      try {
+        var firebaseConfig = {
+          apiKey: "AIzaSyDHSvdVLhkOHWs1whqkJ4pyol69S6P5C4M",
+          authDomain: "warehouse-inventory-84fef.firebaseapp.com",
+          projectId: "warehouse-inventory-84fef",
+          storageBucket: "warehouse-inventory-84fef.firebasestorage.app",
+          messagingSenderId: "148799748197",
+          appId: "1:148799748197:web:01f8b6022b7e471e306e8c"
+        };
+        var app = firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(firebaseConfig);
+        database = firebase.firestore(app);
+      } catch (e) { /* db 미지원 환경 — 로컬 저장으로 동작 */ }
       if (!database || !alive) return;
       dbRef.current = database;
 
