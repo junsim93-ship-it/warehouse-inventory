@@ -1046,8 +1046,7 @@ function App() {
   const doSignup = (email, password) => {
     setLoginBusy(true); setLoginError("");
     firebase.auth(getFirebaseApp()).createUserWithEmailAndPassword(email, password)
-      .then(cred => {
-        cred.user.sendEmailVerification().catch(() => {});
+      .then(() => {
         setLoginBusy(false); setLoginOpen(false);
         showToast("가입되었습니다. 관리자에게 권한 부여를 요청하세요.", "#9A6B00");
       })
