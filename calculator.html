@@ -864,10 +864,11 @@ function getFirebaseApp() {
   return firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(firebaseConfig);
 }
 
-function LoginModal({ onClose, onLogin, error, busy }) {
+function LoginModal({ onClose, onLogin, onSignup, error, busy }) {
+  const [mode, setMode] = useState("login"); // "login" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const submit = () => onLogin(email.trim(), password);
+  const submit = () => (mode === "login" ? onLogin : onSignup)(email.trim(), password);
   const fieldStyle = { padding:"9px 11px", border:"1px solid #DDE4E2", borderRadius:8, fontSize:14 };
   return (
     <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.4)", display:"flex",
@@ -875,16 +876,24 @@ function LoginModal({ onClose, onLogin, error, busy }) {
       onClick={e=>{ if (e.target === e.currentTarget) onClose(); }}>
       <div style={{background:"#fff", borderRadius:14, padding:24, width:"min(340px,90vw)",
         display:"flex", flexDirection:"column", gap:12}}>
-        <div style={{fontSize:17, fontWeight:800}}>관리자 로그인</div>
+        <div style={{fontSize:17, fontWeight:800}}>{mode === "login" ? "관리자 로그인" : "관리자 계정 가입"}</div>
         <input type="email" placeholder="이메일" autoComplete="username" style={fieldStyle}
           value={email} onChange={e=>setEmail(e.target.value)} />
-        <input type="password" placeholder="비밀번호" autoComplete="current-password" style={fieldStyle}
+        <input type="password" placeholder="비밀번호 (6자 이상)" autoComplete={mode === "login" ? "current-password" : "new-password"} style={fieldStyle}
           value={password} onChange={e=>setPassword(e.target.value)}
           onKeyDown={e=>{ if (e.key==="Enter") submit(); }} />
         {error && <div style={{fontSize:12.5, color:"#C8372D"}}>{error}</div>}
-        <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
-          <Btn kind="ghost" onClick={onClose}>취소</Btn>
-          <Btn onClick={submit} disabled={busy}>로그인</Btn>
+        {mode === "signup" && (
+          <div style={{fontSize:12, color:"#9A6B00"}}>가입 후에도 실제 권한(1/2단계)은 관리자가 별도로 부여해야 기능이 열립니다.</div>
+        )}
+        <div style={{display:"flex", gap:8, justifyContent:"space-between", alignItems:"center"}}>
+          <Btn kind="ghost" small onClick={()=>setMode(mode === "login" ? "signup" : "login")}>
+            {mode === "login" ? "계정 가입" : "로그인으로"}
+          </Btn>
+          <div style={{display:"flex", gap:8}}>
+            <Btn kind="ghost" onClick={onClose}>취소</Btn>
+            <Btn onClick={submit} disabled={busy}>{mode === "login" ? "로그인" : "가입하기"}</Btn>
+          </div>
         </div>
       </div>
     </div>
@@ -1033,6 +1042,22 @@ function App() {
     firebase.auth(getFirebaseApp()).signInWithEmailAndPassword(email, password)
       .then(() => { setLoginBusy(false); setLoginOpen(false); })
       .catch(() => { setLoginBusy(false); setLoginError("이메일 또는 비밀번호가 올바르지 않습니다."); });
+  };
+  const doSignup = (email, password) => {
+    setLoginBusy(true); setLoginError("");
+    firebase.auth(getFirebaseApp()).createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        setLoginBusy(false); setLoginOpen(false);
+        showToast("가입되었습니다. 관리자에게 권한 부여를 요청하세요.", "#9A6B00");
+      })
+      .catch(err => {
+        setLoginBusy(false);
+        const msg = err.code === "auth/email-already-in-use" ? "이미 가입된 이메일입니다."
+          : err.code === "auth/weak-password" ? "비밀번호는 6자 이상이어야 합니다."
+          : err.code === "auth/invalid-email" ? "이메일 형식이 올바르지 않습니다."
+          : "가입에 실패했습니다.";
+        setLoginError(msg);
+      });
   };
   const doLogout = () => firebase.auth(getFirebaseApp()).signOut();
 
@@ -1913,7 +1938,7 @@ function App() {
           </div>
         </div>
         {loginOpen && (
-          <LoginModal onClose={()=>setLoginOpen(false)} onLogin={doLogin} error={loginError} busy={loginBusy} />
+          <LoginModal onClose={()=>setLoginOpen(false)} onLogin={doLogin} onSignup={doSignup} error={loginError} busy={loginBusy} />
         )}
 
         {/* 재고 기준 선택 */}
