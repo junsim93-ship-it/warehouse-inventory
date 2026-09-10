@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", sans-serif;
@@ -504,7 +505,7 @@ function ImportBtn({ onImport }) {
 }
 
 /* ── 재고 엑셀 업로드 카드 (3PL / 이카운트 각각) ── */
-function StockUploadCard({ srcKey, data, prevData, onLoaded, onReset, onRevert }) {
+function StockUploadCard({ srcKey, data, prevData, onLoaded, onReset, onRevert, locked }) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -582,6 +583,8 @@ function StockUploadCard({ srcKey, data, prevData, onLoaded, onReset, onRevert }
       )}
 
       {/* 드래그 앤 드롭 영역 */}
+      {locked ? <LockedNotice tier={1} label="재고 업로드/초기화" /> : (
+      <>
       <div onClick={()=>!busy && ref.current.click()}
         onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
         style={{
@@ -607,6 +610,8 @@ function StockUploadCard({ srcKey, data, prevData, onLoaded, onReset, onRevert }
         )}
         <Btn kind="plain" small onClick={onReset}>초기 데이터로 되돌리기</Btn>
       </div>
+      </>
+      )}
       {prevData && (
         <div style={{marginTop:8, fontSize:11.5, color:"#9A6B00", lineHeight:1.6}}>
           ↶ 되돌리기 가능: <b>{prevData.fileName}</b> ({prevData.date})
@@ -846,6 +851,66 @@ function LotTable({ lots, required, allocations, showSource, excluded, onToggle,
   );
 }
 
+/* index.html과 같은 Firebase 프로젝트를 공유 -- 로그인 계정/권한(roles/{uid}.tier)도 그대로 재사용된다 */
+function getFirebaseApp() {
+  var firebaseConfig = {
+    apiKey: "AIzaSyDHSvdVLhkOHWs1whqkJ4pyol69S6P5C4M",
+    authDomain: "warehouse-inventory-84fef.firebaseapp.com",
+    projectId: "warehouse-inventory-84fef",
+    storageBucket: "warehouse-inventory-84fef.firebasestorage.app",
+    messagingSenderId: "148799748197",
+    appId: "1:148799748197:web:01f8b6022b7e471e306e8c"
+  };
+  return firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(firebaseConfig);
+}
+
+function LoginModal({ onClose, onLogin, error, busy }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const submit = () => onLogin(email.trim(), password);
+  const fieldStyle = { padding:"9px 11px", border:"1px solid #DDE4E2", borderRadius:8, fontSize:14 };
+  return (
+    <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.4)", display:"flex",
+      alignItems:"center", justifyContent:"center", zIndex:1000}}
+      onClick={e=>{ if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{background:"#fff", borderRadius:14, padding:24, width:"min(340px,90vw)",
+        display:"flex", flexDirection:"column", gap:12}}>
+        <div style={{fontSize:17, fontWeight:800}}>관리자 로그인</div>
+        <input type="email" placeholder="이메일" autoComplete="username" style={fieldStyle}
+          value={email} onChange={e=>setEmail(e.target.value)} />
+        <input type="password" placeholder="비밀번호" autoComplete="current-password" style={fieldStyle}
+          value={password} onChange={e=>setPassword(e.target.value)}
+          onKeyDown={e=>{ if (e.key==="Enter") submit(); }} />
+        {error && <div style={{fontSize:12.5, color:"#C8372D"}}>{error}</div>}
+        <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+          <Btn kind="ghost" onClick={onClose}>취소</Btn>
+          <Btn onClick={submit} disabled={busy}>로그인</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthBox({ user, tier, onLoginClick, onLogout }) {
+  if (!user) return <Btn kind="ghost" small onClick={onLoginClick}>🔒 관리자 로그인</Btn>;
+  const tierLabel = tier === 2 ? "2단계 관리자" : tier === 1 ? "1단계 관리자" : "권한 없음";
+  return (
+    <div style={{display:"flex", alignItems:"center", gap:8, fontSize:12.5, color:"#5C6B69"}}>
+      <span>{user.email} · {tierLabel}</span>
+      <Btn kind="ghost" small onClick={onLogout}>로그아웃</Btn>
+    </div>
+  );
+}
+
+function LockedNotice({ tier, label }) {
+  return (
+    <div style={{fontSize:12, color:"#9A6B00", background:"#FBF3DE", border:"1px solid #E0C97A",
+      borderRadius:8, padding:"8px 10px"}}>
+      🔒 {label ? label + "은(는) " : ""}{tier}단계 로그인 후 이용할 수 있습니다.
+    </div>
+  );
+}
+
 function App() {
   const [tab, setTab] = useState("plan");
   const [boms, setBoms] = useState(() => {
@@ -897,18 +962,8 @@ function App() {
     const unsubs = [];
     (async () => {
       let database = null;
-      try {
-        var firebaseConfig = {
-          apiKey: "AIzaSyDHSvdVLhkOHWs1whqkJ4pyol69S6P5C4M",
-          authDomain: "warehouse-inventory-84fef.firebaseapp.com",
-          projectId: "warehouse-inventory-84fef",
-          storageBucket: "warehouse-inventory-84fef.firebasestorage.app",
-          messagingSenderId: "148799748197",
-          appId: "1:148799748197:web:01f8b6022b7e471e306e8c"
-        };
-        var app = firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(firebaseConfig);
-        database = firebase.firestore(app);
-      } catch (e) { /* db 미지원 환경 — 로컬 저장으로 동작 */ }
+      try { database = firebase.firestore(getFirebaseApp()); }
+      catch (e) { /* db 미지원 환경 — 로컬 저장으로 동작 */ }
       if (!database || !alive) return;
       dbRef.current = database;
 
@@ -951,6 +1006,39 @@ function App() {
     })();
     return () => { alive = false; unsubs.forEach(u => u()); };
   }, []);
+
+  /* 로그인 -- index.html과 같은 roles/{uid}.tier 체계를 그대로 사용:
+     1단계는 전산(재고) 추가, 2단계는 BOM 추가/불러오기/내보내기까지 가능 */
+  const [authUser, setAuthUser] = useState(null);
+  const [authTier, setAuthTier] = useState(0);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+
+  useEffect(() => {
+    let auth;
+    try { auth = firebase.auth(getFirebaseApp()); } catch (e) { return; }
+    const unsub = auth.onAuthStateChanged(user => {
+      setAuthUser(user ? { email: user.email, uid: user.uid } : null);
+      if (!user) { setAuthTier(0); return; }
+      firebase.firestore(getFirebaseApp()).doc("roles/" + user.uid).get().then(doc => {
+        setAuthTier((doc.exists && doc.data().tier) || 0);
+      }).catch(() => setAuthTier(0));
+    });
+    return unsub;
+  }, []);
+
+  const doLogin = (email, password) => {
+    setLoginBusy(true); setLoginError("");
+    firebase.auth(getFirebaseApp()).signInWithEmailAndPassword(email, password)
+      .then(() => { setLoginBusy(false); setLoginOpen(false); })
+      .catch(() => { setLoginBusy(false); setLoginError("이메일 또는 비밀번호가 올바르지 않습니다."); });
+  };
+  const doLogout = () => firebase.auth(getFirebaseApp()).signOut();
+
+  const canEditStock = authTier >= 1;
+  const canEditBom = authTier >= 2;
+  useEffect(() => { if (!canEditBom) setEditing(null); }, [canEditBom]);
 
   const persistBoms = next => {
     setBoms(next);
@@ -1810,12 +1898,18 @@ function App() {
             </div>
           </div>
           <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
-            <ImportBtn onImport={handleImport} />
-            <Btn kind="ghost" small onClick={async ()=>{ if(!boms.length){showToast("저장된 BOM이 없습니다.","#9A6B00");return;} const ok = await exportBoms(boms); if (ok) showToast("BOM 파일을 내보냈습니다."); }}>
-              💾 BOM 내보내기
-            </Btn>
+            <AuthBox user={authUser} tier={authTier} onLoginClick={()=>setLoginOpen(true)} onLogout={doLogout} />
+            {canEditBom && <ImportBtn onImport={handleImport} />}
+            {canEditBom && (
+              <Btn kind="ghost" small onClick={async ()=>{ if(!boms.length){showToast("저장된 BOM이 없습니다.","#9A6B00");return;} const ok = await exportBoms(boms); if (ok) showToast("BOM 파일을 내보냈습니다."); }}>
+                💾 BOM 내보내기
+              </Btn>
+            )}
           </div>
         </div>
+        {loginOpen && (
+          <LoginModal onClose={()=>setLoginOpen(false)} onLogin={doLogin} error={loginError} busy={loginBusy} />
+        )}
 
         {/* 재고 기준 선택 */}
         <div style={{
@@ -2292,8 +2386,9 @@ function App() {
                   <div style={{fontSize:13, color:"#5C6B69"}}>
                     BOM은 이 링크를 여는 모든 기기에 자동으로 공유 저장됩니다. 백업이 필요하면 상단 <b>BOM 내보내기</b>를 이용하세요.
                   </div>
-                  <div style={{display:"flex", gap:8}}>
-                    {boms.length > 0 && (
+                  <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                    {!canEditBom && <LockedNotice tier={2} label="BOM 추가/수정/삭제" />}
+                    {canEditBom && boms.length > 0 && (
                       <Btn kind="danger" onClick={()=>{
                         if (confirm(
                           `⚠ 등록된 BOM ${boms.length}개를 전부 삭제합니다.\n\n` +
@@ -2303,7 +2398,7 @@ function App() {
                         )) deleteAllBoms();
                       }}>🗑 BOM 전체 삭제</Btn>
                     )}
-                    <Btn onClick={()=>setEditing("new")}>+ 새 BOM 등록</Btn>
+                    {canEditBom && <Btn onClick={()=>setEditing("new")}>+ 새 BOM 등록</Btn>}
                   </div>
                 </div>
                 {boms.length===0 ? (
@@ -2322,10 +2417,12 @@ function App() {
                           </span>
                         )}
                       </div>
-                      <div style={{display:"flex", gap:6}}>
-                        <Btn kind="ghost" small onClick={()=>setEditing(b)}>수정</Btn>
-                        <Btn kind="danger" small onClick={()=>{ if(confirm(`"${b.name}" BOM을 삭제할까요?`)) deleteBom(b.id); }}>삭제</Btn>
-                      </div>
+                      {canEditBom && (
+                        <div style={{display:"flex", gap:6}}>
+                          <Btn kind="ghost" small onClick={()=>setEditing(b)}>수정</Btn>
+                          <Btn kind="danger" small onClick={()=>{ if(confirm(`"${b.name}" BOM을 삭제할까요?`)) deleteBom(b.id); }}>삭제</Btn>
+                        </div>
+                      )}
                     </div>
                     <div style={{marginTop:8, display:"flex", flexWrap:"wrap", gap:6}}>
                       {b.components.map(c=>(
@@ -2420,7 +2517,7 @@ function App() {
               <b> 이카운트</b>는 시리얼/로트No. 재고현황(품목코드·재고수량·시리얼/로트No.·유효기한) 양식을 자동 인식합니다.
             </div>
             <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
-              <StockUploadCard srcKey="p3l" data={stock.p3l} prevData={prevStock.p3l}
+              <StockUploadCard srcKey="p3l" data={stock.p3l} prevData={prevStock.p3l} locked={!canEditStock}
                 onLoaded={d=>{
                   if (order.length > 0) {
                     const ok = confirm(
@@ -2438,7 +2535,7 @@ function App() {
                 }}
                 onRevert={()=>revertStockSource("p3l")}
                 onReset={()=>{ persistStock({...stock, p3l:{ fileName:"초기 데이터 (inventory_16.xlsx)", date:"2026-06-10 기준", lots:INIT_3PL }}); showToast("3PL 전산을 초기 데이터로 되돌렸습니다."); }} />
-              <StockUploadCard srcKey="carton" data={stock.carton || {fileName:"(데이터 없음)",date:"",lots:[]}} prevData={prevStock.carton}
+              <StockUploadCard srcKey="carton" data={stock.carton || {fileName:"(데이터 없음)",date:"",lots:[]}} prevData={prevStock.carton} locked={!canEditStock}
                 onLoaded={d=>{
                   if (order.length > 0) {
                     const ok = confirm(
@@ -2456,7 +2553,7 @@ function App() {
                 }}
                 onRevert={()=>revertStockSource("carton")}
                 onReset={()=>{ persistStock({...stock, carton:{ fileName:"(데이터 없음)", date:"", lots:[] }}); showToast("카톤박스 전산을 초기 데이터로 되돌렸습니다."); }} />
-              <StockUploadCard srcKey="ecount" data={stock.ecount} prevData={prevStock.ecount}
+              <StockUploadCard srcKey="ecount" data={stock.ecount} prevData={prevStock.ecount} locked={!canEditStock}
                 onLoaded={d=>{
                   if (order.length > 0) {
                     const ok = confirm(
@@ -2475,10 +2572,14 @@ function App() {
                 onRevert={()=>revertStockSource("ecount")}
                 onReset={()=>{ persistStock({...stock, ecount:{ fileName:"초기 데이터 (시리얼로트 재고현황)", date:"2026-06-10 기준", lots:INIT_ECOUNT }}); showToast("이카운트 전산을 초기 데이터로 되돌렸습니다."); }} />
             </div>
-            <ManualStockAddForm onAdd={(srcKey, lot) => {
-              addManualLot(srcKey, lot);
-              showToast(`${SRC[srcKey]}에 ${lot.c} 재고 ${fmt(lot.q)}개를 추가했습니다.`);
-            }} />
+            {canEditStock ? (
+              <ManualStockAddForm onAdd={(srcKey, lot) => {
+                addManualLot(srcKey, lot);
+                showToast(`${SRC[srcKey]}에 ${lot.c} 재고 ${fmt(lot.q)}개를 추가했습니다.`);
+              }} />
+            ) : (
+              <div style={{marginTop:18, maxWidth:640}}><LockedNotice tier={1} label="재고 직접 추가" /></div>
+            )}
           </div>
         )}
       </div>

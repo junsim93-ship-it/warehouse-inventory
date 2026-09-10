@@ -28,15 +28,19 @@ service cloud.firestore {
       allow write: if isTier1();
     }
 
-    // 부자재 계산기(calculator.html)는 로그인 기능이 없으므로 이 컬렉션들은 인증 없이 열어둔다.
+    // 부자재 계산기(calculator.html): 조회는 로그인 없이 가능, 1단계는 전산(재고) 추가,
+    // BOM 추가/불러오기/내보내기는 2단계부터. settings(계산 기준)는 누구나 바꿀 수 있는 화면 설정이라 열어둔다.
     match /boms/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isTier2();
     }
     match /stock/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isTier1();
     }
     match /stockPrev/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isTier1();
     }
     match /settings/{docId} {
       allow read, write: if true;
