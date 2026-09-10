@@ -864,11 +864,14 @@ function getFirebaseApp() {
   return firebase.apps.length ? firebase.apps[0] : firebase.initializeApp(firebaseConfig);
 }
 
+const SIGNUP_INVITE_CODE = "changeme-2024"; // 필요시 이 값만 바꿔서 아는 사람에게만 알려주면 됨
+
 function LoginModal({ onClose, onLogin, onSignup, error, busy }) {
   const [mode, setMode] = useState("login"); // "login" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const submit = () => (mode === "login" ? onLogin : onSignup)(email.trim(), password);
+  const [inviteCode, setInviteCode] = useState("");
+  const submit = () => mode === "login" ? onLogin(email.trim(), password) : onSignup(email.trim(), password, inviteCode.trim());
   const fieldStyle = { padding:"9px 11px", border:"1px solid #DDE4E2", borderRadius:8, fontSize:14 };
   return (
     <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.4)", display:"flex",
@@ -884,7 +887,12 @@ function LoginModal({ onClose, onLogin, onSignup, error, busy }) {
           onKeyDown={e=>{ if (e.key==="Enter") submit(); }} />
         {error && <div style={{fontSize:12.5, color:"#C8372D"}}>{error}</div>}
         {mode === "signup" && (
-          <div style={{fontSize:12, color:"#9A6B00"}}>가입 후에도 실제 권한(1/2단계)은 관리자가 별도로 부여해야 기능이 열립니다.</div>
+          <>
+            <input type="text" placeholder="초대 코드" style={fieldStyle}
+              value={inviteCode} onChange={e=>setInviteCode(e.target.value)}
+              onKeyDown={e=>{ if (e.key==="Enter") submit(); }} />
+            <div style={{fontSize:12, color:"#9A6B00"}}>초대 코드는 관리자에게 문의하세요. 가입 후에도 실제 권한(1/2단계)은 별도로 부여해야 기능이 열립니다.</div>
+          </>
         )}
         <div style={{display:"flex", gap:8, justifyContent:"space-between", alignItems:"center"}}>
           <Btn kind="ghost" small onClick={()=>setMode(mode === "login" ? "signup" : "login")}>
@@ -1043,10 +1051,16 @@ function App() {
       .then(() => { setLoginBusy(false); setLoginOpen(false); })
       .catch(() => { setLoginBusy(false); setLoginError("이메일 또는 비밀번호가 올바르지 않습니다."); });
   };
-  const doSignup = (email, password) => {
+  const doSignup = (email, password, inviteCode) => {
+    // ponytail: 코드가 클라이언트에 노출돼 실제 비밀은 아님(봇만 거름), 진짜 방지는 Firebase App Check 추가
+    if (inviteCode !== SIGNUP_INVITE_CODE) {
+      setLoginError("초대 코드가 올바르지 않습니다.");
+      return;
+    }
     setLoginBusy(true); setLoginError("");
     firebase.auth(getFirebaseApp()).createUserWithEmailAndPassword(email, password)
-      .then(() => {
+      .then(cred => {
+        cred.user.sendEmailVerification().catch(() => {});
         setLoginBusy(false); setLoginOpen(false);
         showToast("가입되었습니다. 관리자에게 권한 부여를 요청하세요.", "#9A6B00");
       })

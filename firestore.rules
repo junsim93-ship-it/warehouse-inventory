@@ -43,7 +43,8 @@ service cloud.firestore {
       allow write: if isTier1();
     }
     match /settings/{docId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isTier1();
     }
 
     // an immutable trail of who changed what -- only 2단계 관리자 can read it, anyone tier 1+
