@@ -1,61 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function roleTier() {
-      return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier;
+    function approved() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier in [1, 2];
     }
-    function isTier1() { return request.auth != null && roleTier() >= 1; }
-    function isTier2() { return request.auth != null && roleTier() >= 2; }
-
-    // each admin can read only their own role doc; roles are assigned by hand in the console,
-    // never written from the client.
+    function tier2() {
+      return approved() && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier == 2;
+    }
     match /roles/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+    match /{collection}/{id} {
+      allow read: if collection in ['shelves', 'pallets', 'stock', 'stockPrev', 'settings', 'boms'] && approved();
+      // The callable validates and audits writes using the Admin SDK and IAM.
       allow write: if false;
     }
-
-    match /shelves/{shelfId} {
-      allow read: if true;
-      // 1단계: can register/edit/delete products in a shelf's cells, but not resize it --
-      // `cols` must stay whatever it already was (or whatever the doc is first created with).
-      allow write: if isTier1() && (resource == null || request.resource.data.cols == resource.data.cols);
-      allow write: if isTier2();
-    }
-
-    match /pallets/{palletId} {
-      allow read: if true;
-      allow write: if isTier1();
-    }
-
-    // 부자재 계산기(calculator.html): 조회는 로그인 없이 가능, 1단계는 전산(재고) 추가,
-    // BOM 추가/불러오기/내보내기는 2단계부터. settings(계산 기준)는 누구나 바꿀 수 있는 화면 설정이라 열어둔다.
-    match /boms/{docId} {
-      allow read: if true;
-      allow write: if isTier2();
-    }
-    match /stock/{docId} {
-      allow read: if true;
-      allow write: if isTier1();
-    }
-    match /stockPrev/{docId} {
-      allow read: if true;
-      allow write: if isTier1();
-    }
-    match /settings/{docId} {
-      allow read: if true;
-      allow write: if isTier1();
-    }
-
-    // an immutable trail of who changed what -- only 2단계 관리자 can read it, anyone tier 1+
-    // can append an entry (right after a save they were already allowed to make), and `by`/`ts`
-    // must be their own identity/the server clock, not whatever the client claims.
-    match /auditLog/{logId} {
-      allow read: if isTier2();
-      allow create: if isTier1()
-        && request.resource.data.by == request.auth.token.email
-        && request.resource.data.ts == request.time;
-      allow update, delete: if false;
-    }
+    match /auditLog/{id} { allow read: if tier2(); }
+    match /auditVersions/{id}/data/{version} { allow read: if tier2(); }
   }
 }

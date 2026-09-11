@@ -1,0 +1,16 @@
+{
+  "name": "warehouse-inventory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-warehouse-security \"node --test tests/emulator/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "esbuild": "0.28.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.30.0"
+  }
+}

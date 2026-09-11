@@ -1,0 +1,37 @@
+[
+  {
+    "file": "react.production.min.js",
+    "url": "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
+    "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd"
+  },
+  {
+    "file": "react-dom.production.min.js",
+    "url": "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js",
+    "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d"
+  },
+  {
+    "file": "xlsx.full.min.js",
+    "url": "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
+    "sha256": "cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41"
+  },
+  {
+    "file": "firebase-app-compat.js",
+    "url": "npm:firebase@12.19.0",
+    "sha256": "11354507ecdd4a0f56f989800ccc8925baf120864d0b8fdd9c372e4c7ec059a6"
+  },
+  {
+    "file": "firebase-firestore-compat.js",
+    "url": "npm:firebase@12.19.0",
+    "sha256": "38c5e3d7c53fefff59f68a49dab9589cea66fabc7aada2f68354bfeb52cca4cb"
+  },
+  {
+    "file": "firebase-auth-compat.js",
+    "url": "npm:firebase@12.19.0",
+    "sha256": "13ff243c467f542d591d7caf11b4dcce32414e1119d458d71293eb606197f0ec"
+  },
+  {
+    "file": "firebase-functions-compat.js",
+    "url": "npm:firebase@12.19.0",
+    "sha256": "90bad510e9f3d886e9f404b5b341cef01c2cfe27ff61bac1be417196f0d3ba40"
+  }
+]

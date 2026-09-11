@@ -1,0 +1,1471 @@
+
+(function(){
+  var DATA = JSON.parse(document.getElementById('planData').textContent);
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var svg = document.getElementById('planSvg');
+  svg.setAttribute('viewBox', '0 0 ' + DATA.slideW.toFixed(2) + ' ' + DATA.slideH.toFixed(2));
+
+  function el(tag, attrs){
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // ---- defs: flat pallet + pillar hatch textures (no drop shadow -- the drawing reads as a
+  // crisp technical plan, line weight carries hierarchy instead of soft shadows) ----
+  var defs = el('defs', {});
+
+  var hatchPattern = el('pattern', { id:'palletHatch', width:13, height:13, patternUnits:'userSpaceOnUse', patternTransform:'rotate(45)' });
+  hatchPattern.appendChild(el('rect', { x:0, y:0, width:13, height:13, fill:'var(--pallet)' }));
+  hatchPattern.appendChild(el('line', { x1:0, y1:0, x2:0, y2:13, stroke:'var(--pallet-line)', 'stroke-width':1.4, opacity:0.4 }));
+  defs.appendChild(hatchPattern);
+
+  // kept as a valid no-op so the many filter:url(#softShadow) references stay valid without
+  // painting anything -- the flat look drops shadows entirely.
+  var shadow = el('filter', { id:'softShadow' });
+  shadow.appendChild(el('feOffset', { dx:0, dy:0 }));
+  defs.appendChild(shadow);
+  svg.appendChild(defs);
+
+  // background: a single flat surface (no dot grid -- the page frame already provides the panel)
+  svg.appendChild(el('rect', {x:0,y:0,width:DATA.slideW,height:DATA.slideH,fill:'var(--panel)'}));
+
+  var cssRoot = getComputedStyle(document.documentElement);
+  function cssVar(name){ return cssRoot.getPropertyValue(name).trim(); }
+
+  // "fixture" is drawn exactly like a shelf but holds no stock: 사무, 작업대, 엘리베이터, 문, 칠판
+  // are equipment and openings on the plan, not storage locations, so they get no inventory grid,
+  // no badge, no card in the 재고 현황 tab, and don't count toward the header's 위치 total.
+  var groups = { wall: [], shelf: [], fixture: [], pallet: [], room: [], pillar: [], door: [], tick: [] };
+  DATA.pics.forEach(function(p){ groups[p.role].push(p); });
+
+  function rectWithRot(p, attrs){
+    var cx = p.x + p.w/2, cy = p.y + p.h/2;
+    var g = el('g', { transform: 'rotate(' + p.rot + ' ' + cx + ' ' + cy + ')' });
+    var r = el('rect', Object.assign({ x:p.x, y:p.y, width:p.w, height:p.h }, attrs));
+    g.appendChild(r);
+    return g;
+  }
+
+  // draw order: shelf boxes first (so pallets/rooms/pillars/walls sit visually correct), then pallets,
+  // then rooms and pillars, then walls (thickest, most prominent), then doors, then ticks, then text.
+
+  function drawBox(p){
+    if (p.poly){
+      // an L-shaped shelf made by fusing two rects and dropping their shared edge -- x/y/w/h/rot
+      // above still describe its bounding box (used by label placement, badges, etc.), but the
+      // visible fill/outline follows this explicit point list instead of a plain rect.
+      var poly = el('polygon', {
+        points: p.poly.map(function(pt){ return pt[0]+','+pt[1]; }).join(' '),
+        fill:'var(--panel-raised)', stroke:'var(--line)', 'stroke-width':2
+      });
+      p._rect = poly;
+      p._group = poly;
+      svg.appendChild(poly);
+    } else {
+      var g = rectWithRot(p, { fill:'var(--panel-raised)', stroke:'var(--line)', 'stroke-width':2, rx:2 });
+      p._rect = g.firstChild;
+      p._group = g;
+      svg.appendChild(g);
+    }
+  }
+
+  groups.shelf.forEach(function(p, i){
+    // id comes from the source data (assigned once, per physical shelf) rather than this loop's
+    // index -- inserting, deleting, or reordering shelves elsewhere in DATA.pics can no longer
+    // shift which shelf a saved shelf-N inventory record actually belongs to. The index fallback
+    // only fires for a shelf the data never gave an id (e.g. one added later by hand).
+    if (!p.id) p.id = 'shelf-' + i;
+    drawBox(p);
+  });
+
+  // fixtures need no id: nothing is ever stored against them.
+  groups.fixture.forEach(drawBox);
+
+  groups.pallet.forEach(function(p, i){
+    // same fix as shelves above: id is fixed data, not this loop's position.
+    if (!p.id) p.id = 'pallet-' + i;
+    var g = rectWithRot(p, { fill:'url(#palletHatch)', stroke:'var(--line)', 'stroke-width':2, rx:2 });
+    p._rect = g.firstChild;
+    p._group = g;
+    svg.appendChild(g);
+  });
+
+  var WALL_THICKNESS = 14;
+  // rooms (기계팀's enclosed area) and pillars (the small structural columns next to the elevator
+  // and between 샘플 선반 1 / 임가공 선반 2) used to share one "orangeFrame" role, told apart only
+  // by a `minSide > 150` size check -- a real room and a structural column are different things
+  // with nothing to do with each other, and a size cutoff is exactly the kind of thing a future
+  // pillar or a small room would silently trip. They're separate roles now, so each is drawn (and
+  // matched against labels, below) on its own terms instead of by guessing from its dimensions.
+  // every non-wall outline (shelf, fixture, pallet, room, pillar, door) shares one line weight and
+  // color -- only the wall itself, drawn separately above, is allowed to stand out.
+  // the 기계팀 room and pillars are real structural wall, not furniture -- drawn at wall
+  // thickness/color like the boundary itself, not the thin shared outline everything else uses.
+  groups.room.forEach(function(p){
+    svg.appendChild(rectWithRot(p, { fill:'var(--panel-raised)', stroke:'var(--wall)', 'stroke-width':WALL_THICKNESS }));
+  });
+  groups.pillar.forEach(function(p){
+    // an X, not a hatch, marks a structural pillar -- reads as a column at a glance without the
+    // texture competing with the pallet hatch right next to it.
+    var g = rectWithRot(p, { fill:'var(--panel-raised)', stroke:'var(--wall)', 'stroke-width':WALL_THICKNESS });
+    var inset = 4;
+    g.appendChild(el('line', { x1:p.x+inset, y1:p.y+inset, x2:p.x+p.w-inset, y2:p.y+p.h-inset, stroke:'var(--line)', 'stroke-width':2 }));
+    g.appendChild(el('line', { x1:p.x+p.w-inset, y1:p.y+inset, x2:p.x+inset, y2:p.y+p.h-inset, stroke:'var(--line)', 'stroke-width':2 }));
+    svg.appendChild(g);
+  });
+
+  // The source drawing builds the outer wall out of independent rotated rectangles. Instead of
+  // rendering each one separately (which never lines up cleanly, however the joints are
+  // patched), the true corner-to-corner connectivity was traced out of the source geometry
+  // itself (which piece's endpoint sits next to which other piece's endpoint) into ONE ordered,
+  // closed vertex loop -- a single stroked polygon can't have a gap or stair-step at its own
+  // vertices, because there's only one path, not many that have to agree with each other.
+  // the gap that used to sit between x=1696 and x=1870.67 is closed now -- everything that was
+  // right of it got pulled left by that same 174.67, so the boundary is one closed ring again.
+  // (checked against the interior: several shelves along this wall -- e.g. 기계팀 선반 1/2 and
+  // 제품선반4 -- render with their outer edge landing at exactly x=2995.3333, matching this pulled
+  // position to four decimal places. The raw wall-picture rectangles (image28/36/37.png) suggest
+  // a position ~175px further right, but the shelves are the stronger evidence since they were
+  // positioned independently of this hand-traced polygon -- so this pulled position, not the raw
+  // picture extents, is what the rest of the drawing was actually built against. Do not "undo"
+  // this shift without re-checking it against the shelves again.)
+  var wallPoints = [
+    [1696,1586],[1435,1586],[973,1586],
+    [973,1744],[154,1744],[154,1267],[443,905],[548,905],[581,787],
+    [915,787],[915,550],[1019,550],[1019,295],[1267,295],[1267,34],[1696,34],
+    [1751.3333333333333,34],[2995.3333333333335,34],[2995.3333333333335,1177],
+    [3014.993,1177],[3014.993,1678.895],[2389.673,1678.895],[2389.673,1586],
+    [2316.3333333333335,1586],[2188.3333333333335,1586],[1940.3333333333333,1586]
+  ];
+  // every wall in this drawing is meant to run dead horizontal or dead vertical -- the raw
+  // traced corners above are each an AVERAGE of two independently-placed source pieces, so a
+  // "horizontal" edge can be off by a few px in y (and a "vertical" one by a few px in x),
+  // which is exactly what reads as crooked. Snap each vertex onto its predecessor's axis.
+  function straightenOrthogonal(points, closed, skipEdges){
+    for (var wk = 1; wk < points.length; wk++){
+      if (skipEdges && skipEdges.indexOf(wk) !== -1) continue; // a genuine diagonal wall (e.g. behind 알맹이 선반) -- leave it angled
+      var prevPt = points[wk-1], curPt = points[wk];
+      if (Math.abs(curPt[0]-prevPt[0]) > Math.abs(curPt[1]-prevPt[1])) curPt[1] = prevPt[1];
+      else curPt[0] = prevPt[0];
+    }
+    if (closed){
+      // the loop above only straightens edges up to the last point -- the CLOSING edge (last
+      // point back to the first) never gets the same treatment on its own. The last point's own
+      // perpendicular edge only fixed its OTHER coordinate, so it's safe to snap this one too
+      // without disturbing anything already straightened.
+      var firstPt = points[0], lastPt = points[points.length-1];
+      if (Math.abs(firstPt[0]-lastPt[0]) > Math.abs(firstPt[1]-lastPt[1])) lastPt[1] = firstPt[1];
+      else lastPt[0] = firstPt[0];
+    }
+  }
+  svg.appendChild(el('polygon', {
+    points: wallPoints.map(function(pt){ return pt[0]+','+pt[1]; }).join(' '),
+    fill:'none', stroke:'var(--wall)', 'stroke-width':WALL_THICKNESS, 'stroke-linejoin':'miter'
+  }));
+
+  // the small partition wall that runs past 칠판 / 기계팀 선반 3 is real in the source, but it
+  // sits close enough to the outer boundary that folding it INTO that single polygon crossed
+  // over the boundary's own line there. Drawn as its own separate stroke instead -- still one
+  // continuous line, just not forced to share a path with the outer wall.
+  var chilpanWallPoints = [[2493.353,1319.255],[2712.863,1324.925],[2716.103,1217.195],[3088.3333333333335,1173]];
+  straightenOrthogonal(chilpanWallPoints, false);
+  // pin the last point onto the outer wall's own (now-straightened) corner exactly, so the two
+  // strokes actually meet instead of landing a px or two apart -- then re-align the point before
+  // it too, so that final edge stays a straight horizontal run into the join instead of tilting
+  // toward wherever the corner ended up.
+  var joinPt = [3014.993,1177];
+  chilpanWallPoints[2][1] = joinPt[1];
+  chilpanWallPoints[3] = joinPt.slice();
+  svg.appendChild(el('polyline', {
+    points: chilpanWallPoints.map(function(pt){ return pt[0]+','+pt[1]; }).join(' '),
+    fill:'none', stroke:'var(--wall)', 'stroke-width':WALL_THICKNESS, 'stroke-linejoin':'miter', 'stroke-linecap':'square'
+  }));
+
+  // a small extra room added outside the main boundary, in the gap between 문2 and 기계팀 --
+  // its own little closed box, same wall styling as everything else.
+  var extraRoomPoints = [[1960.3333333333335,1588],[2160.3333333333335,1588],[2160.3333333333335,1768],[1960.3333333333335,1768]];
+  svg.appendChild(el('polygon', {
+    points: extraRoomPoints.map(function(pt){ return pt[0]+','+pt[1]; }).join(' '),
+    fill:'var(--panel-raised)', stroke:'var(--wall)', 'stroke-width':WALL_THICKNESS, 'stroke-linejoin':'miter'
+  }));
+
+  groups.tick.forEach(function(p){
+    svg.appendChild(rectWithRot(p, { fill:'var(--line)', stroke:'none' }));
+  });
+
+  // doors: a crisp vector swing symbol (arc + two straight edges) instead of a raster icon,
+  // so it stays sharp at any zoom level and matches the rest of the drawing.
+  groups.door.forEach(function(p){
+    var cx = p.x + p.w/2, cy = p.y + p.h/2;
+    var flipParts = [];
+    if (p.flip) flipParts.push('translate(' + (2*cx) + ' 0) scale(-1 1)');
+    if (p.vflip) flipParts.push('translate(0 ' + (2*cy) + ') scale(1 -1)');
+    var outer = el('g', flipParts.length ? { transform: flipParts.join(' ') } : {});
+    var g = el('g', { transform: 'rotate(' + p.rot + ' ' + cx + ' ' + cy + ')' });
+    var r = Math.min(p.w, p.h);
+    var hingeX = p.x, hingeY = p.y + p.h;
+    var topX = p.x, topY = p.y;
+    var farX = p.x + p.w, farY = p.y + p.h;
+    var d = 'M ' + topX + ' ' + topY + ' A ' + r + ' ' + r + ' 0 0 1 ' + farX + ' ' + farY + ' L ' + hingeX + ' ' + hingeY + ' Z';
+    g.appendChild(el('path', { d:d, fill:'none', stroke:'var(--line)', 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round' }));
+    outer.appendChild(g);
+    svg.appendChild(outer);
+  });
+
+  // ---- text ----
+  var measureCanvas = document.createElement('canvas');
+  var mctx = measureCanvas.getContext('2d');
+  function measure(text, fontPx){
+    // measure with the SAME stack the labels actually render in (see #planSvg text), so wrap and
+    // shrink decisions match what's drawn -- the old stack led with "Pretendard", which never
+    // loads here, so every width was measured against a fallback and labels mis-sized.
+    mctx.font = fontPx + 'px "Noto Sans KR","Malgun Gothic",system-ui,sans-serif';
+    return mctx.measureText(text).width;
+  }
+  function wrapLines(text, fontPx, maxWidth){
+    if (!text) return [];
+    if (measure(text, fontPx) <= maxWidth) return [text];
+    // greedy char-level wrap (Korean labels have no useful word breaks at this width)
+    var lines = [];
+    var cur = '';
+    for (var i=0;i<text.length;i++){
+      var next = cur + text[i];
+      if (measure(next, fontPx) > maxWidth && cur.length>0){
+        lines.push(cur);
+        cur = text[i];
+      } else {
+        cur = next;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // find, for each label, the actual box (shelf/pallet/room picture) it sits inside, so text
+  // centers on the box that's really drawn rather than the (independently placed) text frame.
+  // pillars are deliberately excluded: they're structural obstacles, not named spaces, and no
+  // label in the source is meant to attach to one.
+  function rotatedBBox(p){
+    var cx = p.x + p.w/2, cy = p.y + p.h/2;
+    var rad = p.rot * Math.PI/180, cosA = Math.cos(rad), sinA = Math.sin(rad);
+    var corners = [[p.x,p.y],[p.x+p.w,p.y],[p.x,p.y+p.h],[p.x+p.w,p.y+p.h]];
+    var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    corners.forEach(function(c){
+      var dx=c[0]-cx, dy=c[1]-cy;
+      var rx=cx+dx*cosA-dy*sinA, ry=cy+dx*sinA+dy*cosA;
+      minX=Math.min(minX,rx); maxX=Math.max(maxX,rx);
+      minY=Math.min(minY,ry); maxY=Math.max(maxY,ry);
+    });
+    return {minX:minX,maxX:maxX,minY:minY,maxY:maxY};
+  }
+  var containerBoxes = groups.shelf.concat(groups.fixture).concat(groups.pallet).concat(groups.room);
+
+  // fallback for a label with no matching picture at all (nothing in the current source data
+  // needs this -- every text below resolves to a real shelf/pallet/room picture -- but a label
+  // sitting inside plain wall lines instead of a background picture, e.g. a future 창고/화장실,
+  // would need it): build the room rect from the nearest wall segment on each of the 4 sides.
+  function findRoomRect(tb){
+    var tcx = tb.x + tb.w/2, tcy = tb.y + tb.h/2;
+    var above=null, below=null, left=null, right=null;
+    groups.wall.forEach(function(p){
+      var bb = rotatedBBox(p);
+      var horizontal = (bb.maxX-bb.minX) >= (bb.maxY-bb.minY);
+      if (horizontal){
+        if (bb.minX - 60 <= tcx && bb.maxX + 60 >= tcx){
+          if (bb.maxY <= tcy + 5 && (!above || bb.maxY > above.maxY)) above = bb;
+          if (bb.minY >= tcy - 5 && (!below || bb.minY < below.minY)) below = bb;
+        }
+      } else {
+        if (bb.minY - 60 <= tcy && bb.maxY + 60 >= tcy){
+          if (bb.maxX <= tcx + 5 && (!left || bb.maxX > left.maxX)) left = bb;
+          if (bb.minX >= tcx - 5 && (!right || bb.minX < right.minX)) right = bb;
+        }
+      }
+    });
+    if (above && below && left && right){
+      return { x:left.maxX, y:above.maxY, w:right.minX-left.maxX, h:below.minY-above.maxY, rot:0 };
+    }
+    return null;
+  }
+
+  function near90(deg){
+    var r = ((deg % 90) + 90) % 90;
+    return r < 3 || r > 87;
+  }
+
+  // 단상자/수축포/임가공 are deliberately folded into one shared "부자재" name (requested): on the
+  // floor they're all sub-material storage and are referred to that way, so they read as one
+  // numbered run (부자재 선반 1..4, ordered by position in pass 2) rather than four separate names.
+  // This only changes the DISPLAYED label -- saved inventory is keyed by each shelf's own id from
+  // DATA.pics (shelf-11, shelf-14, ...), never by label, so renaming never moves a stock record.
+  // If these ever need to be told apart on screen again, drop the three entries below and give
+  // each its own CATEGORY_FILL row; nothing else depends on the merge.
+  var RENAME = {
+    '알맹이':'미품',
+    '임가공':'부자재',
+    '단상자':'부자재',
+    '수축포':'부자재'
+  };
+
+  // pass 1: match every label to the real box it sits inside, and remember that pairing --
+  // numbering (pass 2, below) needs every shelf's plain name known before any text gets drawn.
+  // a wrong or missing match used to only show up as a console.warn -- invisible to anyone who
+  // isn't a developer with devtools open, even though it means real data (an editor's move of a
+  // shape or a typo in a label) went unnoticed. Surface it on the page itself instead.
+  var uncertainLabels = [], unmatchedLabels = [];
+  var textMatches = [];
+  DATA.texts.forEach(function(tb){
+    var para = tb.paragraphs.filter(function(p){ return p.text && p.text.length>0; })[0];
+    if (!para) return;
+
+    var tcx = tb.x + tb.w/2, tcy = tb.y + tb.h/2;
+    var best = null, bestArea = Infinity, bestBBox = null, method = null;
+    // 작업대's box has been hand-moved far enough (next to 제품 선반 4) that proximity search
+    // can grab the wrong nearby box instead -- pin it to its actual picture directly.
+    if (para.text === '작업대'){
+      var pinned = groups.fixture.filter(function(p){ return p.media === 'image50.png'; })[0];
+      if (pinned){ best = pinned; bestBBox = rotatedBBox(pinned); method = 'pinned'; }
+    }
+    if (!best) containerBoxes.forEach(function(p){
+      var bb = rotatedBBox(p);
+      if (tcx>=bb.minX && tcx<=bb.maxX && tcy>=bb.minY && tcy<=bb.maxY){
+        var area = (bb.maxX-bb.minX)*(bb.maxY-bb.minY);
+        if (area < bestArea){ bestArea = area; best = p; bestBBox = bb; method = 'contain'; }
+      }
+    });
+    // a label whose box was hand-resized/moved after the label was placed can end up just
+    // outside its own box's new bounds -- fall back to the nearest box centre rather than
+    // losing the pairing (and the label) entirely. This path is inherently a guess, not a
+    // verified match (it fires whenever nothing actually contains the label -- including a
+    // simple typo in a text string, or an edit that moved a shape away from its label), so
+    // unlike the two branches above it gets flagged below instead of trusted silently.
+    var bestDist = null;
+    if (!best){
+      bestDist = Infinity;
+      containerBoxes.forEach(function(p){
+        var bb = rotatedBBox(p);
+        var bcx = (bb.minX+bb.maxX)/2, bcy = (bb.minY+bb.maxY)/2;
+        var d = Math.hypot(bcx-tcx, bcy-tcy);
+        // hand-moved boxes can end up quite far from their original label now, so this needs
+        // real headroom -- generous on purpose, it only ever fires when nothing contained the
+        // label in the first place, and it still picks the closest candidate among those.
+        var maxSpan = Math.max(bb.maxX-bb.minX, bb.maxY-bb.minY);
+        if (d < maxSpan * 2.5 + 200 && d < bestDist){ bestDist = d; best = p; bestBBox = bb; method = 'fallback'; }
+      });
+    }
+    if (best){
+      best.rawLabel = best.rawLabel || (RENAME[para.text] || para.text);
+      if (method === 'fallback'){
+        // surface this instead of letting it pass as a normal match: log it so it shows up
+        // immediately in devtools after any edit to DATA.pics/DATA.texts, and mark the shape
+        // itself so pass 3 can render a visible warning on it -- a silent wrong guess here is
+        // exactly the failure mode this heuristic is prone to (see 작업대's own pin above, which
+        // exists because this same fallback once guessed wrong for it).
+        console.warn('[지하 구획도] "' + para.text + '" 라벨이 어떤 도형 안에도 있지 않아 최근접 매칭(' + Math.round(bestDist) + 'px 거리, ' + (best.media || best.role) + ')으로 붙었습니다. 위치를 확인하세요.');
+        best._uncertainMatch = true;
+        uncertainLabels.push(para.text);
+        if (best._rect){
+          best._rect.setAttribute('stroke', '#c0392b');
+          best._rect.setAttribute('stroke-dasharray', '7 5');
+        }
+      }
+    } else {
+      console.warn('[지하 구획도] "' + para.text + '" 라벨을 매칭할 도형을 찾지 못했습니다 -- 화면에 표시되지 않습니다.');
+      unmatchedLabels.push(para.text);
+    }
+    textMatches.push({ tb:tb, para:para, best:best, bestBBox:bestBBox });
+  });
+
+  var matchWarnBanner = document.getElementById('matchWarnBanner');
+  if (matchWarnBanner && (uncertainLabels.length || unmatchedLabels.length)){
+    var warnParts = [];
+    if (uncertainLabels.length) warnParts.push('위치가 불확실하게 매칭된 라벨(도면 위 빨간 점선 테두리 확인): ' + uncertainLabels.join(', '));
+    if (unmatchedLabels.length) warnParts.push('도형을 찾지 못해 화면에 표시되지 않은 라벨: ' + unmatchedLabels.join(', '));
+    matchWarnBanner.textContent = '⚠ 도면 데이터를 확인해주세요 — ' + warnParts.join(' · ');
+    matchWarnBanner.hidden = false;
+  }
+
+  // pass 2: only shelves that SHARE a plain name (e.g. three "샘플" boxes, two "임가공")
+  // get numbered, in reading order within that name group; a uniquely-named shelf ("사무",
+  // "단상자", "수축포", ...) keeps its plain name with no number. Shelves the source text never
+  // labelled fall into one shared "선반" bucket, so they get numbered against each other too.
+  var NO_SUFFIX = ['문','사무','견본','칠판','엘리베이터','작업대'];
+  function shelfName(rawLabel){
+    var base = rawLabel || '선반';
+    if (NO_SUFFIX.indexOf(base) !== -1) return base;
+    if (base.indexOf('선반') !== -1) return base;
+    return base + ' 선반';
+  }
+  // fixtures are named the same way (문 1 / 문 2 still number against each other); they just
+  // never reach the inventory code below.
+  var byName = {};
+  groups.shelf.concat(groups.fixture).forEach(function(p){
+    var name = shelfName(p.rawLabel);
+    (byName[name] = byName[name] || []).push(p);
+  });
+  Object.keys(byName).forEach(function(name){
+    var list = byName[name];
+    if (list.length === 1){ list[0].label = name; return; }
+    list.sort(function(a,b){
+      var ay = a.y + a.h/2, by = b.y + b.h/2;
+      return Math.abs(ay-by) > 20 ? ay-by : (a.x+a.w/2) - (b.x+b.w/2);
+    }).forEach(function(p, i){ p.label = name + ' ' + (i+1); });
+  });
+  // the elevator shaft's own walls, not furniture -- draw it at wall thickness/color like the
+  // 기계팀 room and the pillars, instead of the thin shared outline every other fixture uses.
+  groups.fixture.forEach(function(p){
+    if (p.rawLabel === '엘리베이터'){
+      p._rect.setAttribute('stroke', 'var(--wall)');
+      p._rect.setAttribute('stroke-width', WALL_THICKNESS);
+    }
+  });
+  // pallets/rooms aren't part of the numbering scheme -- they just keep their own text.
+  groups.pallet.concat(groups.room).forEach(function(p){ if (p.rawLabel) p.label = p.rawLabel; });
+  // most pallets carry no label of their own, which is fine on the drawing (the hatch says what
+  // they are) but useless in the 재고 현황 list, where every card needs a name you can find again.
+  // Number the unlabelled ones in reading order. Display only -- saved stock is keyed by the
+  // pallet's own id from DATA.pics, so this numbering can shift without touching any record.
+  groups.pallet.slice().sort(function(a,b){
+    var ay = a.y + a.h/2, by = b.y + b.h/2;
+    return Math.abs(ay-by) > 20 ? ay-by : (a.x+a.w/2) - (b.x+b.w/2);
+  }).forEach(function(p, i){ if (!p.label) p.label = '팔레트 ' + (i+1); });
+
+  // pallets standing close enough to touch read as one physical cluster to anyone on the floor,
+  // but used to get one 재고 현황 card each -- unmanageable once a cluster runs to a dozen. Bundle
+  // touching, unnamed pallets into a single "팔레트 모음" unit for the stock tab and the click-to-
+  // edit target; each pallet keeps its own label and shape on the drawing untouched. A pallet with
+  // a real name (rawLabel) always stays its own unit -- bundling would bury a name someone chose.
+  var CLUSTER_GAP = 15;
+  function bboxGap(a, b){
+    var gx = Math.max(a.minX, b.minX) - Math.min(a.maxX, b.maxX);
+    var gy = Math.max(a.minY, b.minY) - Math.min(a.maxY, b.maxY);
+    return Math.max(gx, gy);
+  }
+  function byReadingOrder(a, b){
+    var ay = a.y + a.h/2, by = b.y + b.h/2;
+    return Math.abs(ay-by) > 20 ? ay-by : (a.x+a.w/2) - (b.x+b.w/2);
+  }
+  var clusterable = groups.pallet.filter(function(p){ return !p.rawLabel; });
+  clusterable.forEach(function(p){ p._bbox = rotatedBBox(p); });
+  var parent = clusterable.map(function(_, i){ return i; });
+  function find(i){ while (parent[i] !== i){ parent[i] = parent[parent[i]]; i = parent[i]; } return i; }
+  for (var ci = 0; ci < clusterable.length; ci++){
+    for (var cj = ci + 1; cj < clusterable.length; cj++){
+      if (bboxGap(clusterable[ci]._bbox, clusterable[cj]._bbox) <= CLUSTER_GAP){
+        var ri = find(ci), rj = find(cj);
+        if (ri !== rj) parent[ri] = rj;
+      }
+    }
+  }
+  var clusters = {};
+  clusterable.forEach(function(p, i){ (clusters[find(i)] = clusters[find(i)] || []).push(p); });
+  Object.keys(clusters).forEach(function(k){ clusters[k].sort(byReadingOrder); });
+
+  var palletUnits = groups.pallet.filter(function(p){ return p.rawLabel; })
+    .map(function(p){ return { id: p.id, label: p.label, members: [p], isGroup: false }; });
+  Object.keys(clusters).map(function(k){ return clusters[k]; })
+    .filter(function(members){ return members.length > 1; })
+    .sort(function(a, b){ return byReadingOrder(a[0], b[0]); })
+    .forEach(function(members, i){
+      palletUnits.push({ id: 'pgroup-' + members[0].id, label: '팔레트 모음 ' + (i+1), members: members, isGroup: true });
+    });
+  // the leftover, never-clustered pallets keep whatever number the full 31-pallet reading-order
+  // pass above happened to give them (5, 12, 17...) -- fine on the drawing, but a mess as the only
+  // numbers showing in the stock tab. Renumber just these sequentially, on both the unit and the
+  // pallet itself, since this label was already documented as display-only and free to shift.
+  Object.keys(clusters).map(function(k){ return clusters[k]; })
+    .filter(function(members){ return members.length === 1; })
+    .map(function(members){ return members[0]; })
+    .sort(byReadingOrder)
+    .forEach(function(p, i){
+      p.label = '팔레트 ' + (i+1);
+      palletUnits.push({ id: p.id, label: p.label, members: [p], isGroup: false });
+    });
+  palletUnits.forEach(function(unit){ unit.members.forEach(function(p){ p._unit = unit; }); });
+
+  // color-code shelves by category so related groups are easy to tell apart at a glance. Matched
+  // against the label AFTER RENAME/numbering, so 부자재 covers all of 단상자/수축포/임가공 in one row.
+  // theme tokens rather than hardcoded fills: each tint tracks light/dark instead of stranding
+  // dark text on a pale fill (or vice versa) when the theme flips.
+  var CATEGORY_FILL = [
+    { prefix: '제품', fill: 'var(--cat-product)' },
+    { prefix: '기계팀', fill: 'var(--cat-machine)' },
+    { prefix: '부자재', fill: 'var(--cat-pack)' },
+    { prefix: '샘플', fill: 'var(--cat-sample)' }
+  ];
+  groups.shelf.forEach(function(p){
+    if (!p.label) return;
+    var match = CATEGORY_FILL.filter(function(c){ return p.label.indexOf(c.prefix) === 0; })[0];
+    if (match) p._rect.setAttribute('fill', match.fill);
+  });
+
+  // pass 3: draw each label using the (possibly numbered) shelf name, or its own text otherwise.
+  textMatches.forEach(function(m){
+    var tb = m.tb, para = m.para, best = m.best, bestBBox = m.bestBBox;
+    // use the real box's own frame (position/size/rotation) when one contains this label;
+    // otherwise try reconstructing the room from its surrounding walls; last resort is the text frame itself.
+    var box = best || findRoomRect(tb) || tb;
+    var bbox = bestBBox || rotatedBBox(box);
+    var displayText = (best && best.label) ? best.label : para.text;
+
+    // many background pictures are rotated 90/180/270 purely as a construction trick (a tall
+    // template image turned into a wide shelf) -- the label itself was never meant to rotate,
+    // so only truly diagonal boxes (like the 알맹이 wall decoration) rotate the text.
+    var axisAligned = near90(box.rot);
+    var groupRotation = axisAligned ? 0 : box.rot;
+    var wrapWidth = axisAligned ? (bbox.maxX - bbox.minX) : box.w;
+
+    // these narrow columns read better as true vertical text -- each character stacked upright,
+    // top to bottom, not one line of horizontal text rotated sideways.
+    // decide by the box's own shape, not its name -- names can change (renaming) or get merged
+    // across boxes of different shapes, but a tall narrow column always reads better vertically.
+    var isVerticalLabel = axisAligned && (bbox.maxY-bbox.minY) > (bbox.maxX-bbox.minX) * 1.4;
+
+    var fontPx = para.szPt * 1.333 * 0.72;
+    var minFontPx = para.szPt * 1.333 * 0.4;
+    var lines, lineHeights;
+    if (isVerticalLabel){
+      groupRotation = 0;
+      // keep the spaces (as their own entries) instead of dropping them, so a stacked label
+      // like "임가공 선반 2" still shows a visible break where the word boundary was -- just a
+      // smaller gap than a full character, not a blank glyph-sized line.
+      var chars = displayText.split('');
+      var availableH = axisAligned ? (bbox.maxY - bbox.minY) : box.h;
+      var totalH = function(fp){
+        return chars.reduce(function(sum, c){ return sum + (c === ' ' ? fp*0.55 : fp*1.12); }, 0);
+      };
+      while (totalH(fontPx) > availableH * 0.94 && fontPx > minFontPx){
+        fontPx *= 0.9;
+      }
+      lines = chars;
+      lineHeights = chars.map(function(c){ return c === ' ' ? fontPx*0.55 : fontPx*1.12; });
+    } else {
+      // shrink narrow labels further until they fit in 2 lines, instead of one fixed size
+      // that's fine for wide boxes but wraps narrow ones into 3+ lines.
+      var maxLines = 2;
+      lines = wrapLines(displayText, fontPx, wrapWidth);
+      while (lines.length > maxLines && fontPx > minFontPx){
+        fontPx *= 0.9;
+        lines = wrapLines(displayText, fontPx, wrapWidth);
+      }
+      lineHeights = lines.map(function(){ return fontPx*1.12; });
+    }
+    var cx = box.x + box.w/2 + (box.labelDx || 0), cy = box.y + box.h/2 + (box.labelDy || 0);
+    var g = el('g', { transform: groupRotation ? ('rotate(' + groupRotation + ' ' + cx + ' ' + cy + ')') : '' });
+    var totalBlockH = lineHeights.reduce(function(a,b){ return a+b; }, 0);
+    var blockTop = cy - totalBlockH/2;
+    var yCursor = blockTop;
+    lines.forEach(function(line, i){
+      var h = lineHeights[i];
+      if (line !== ' '){
+        var t = el('text', {
+          x: cx,
+          y: yCursor + h*0.83,
+          'font-size': fontPx.toFixed(1),
+          'font-weight': 600,
+          'text-anchor': 'middle'
+        });
+        t.textContent = line;
+        g.appendChild(t);
+      }
+      yCursor += h;
+    });
+    svg.appendChild(g);
+  });
+
+  // ---- inventory ----
+  // A shelf is a 2-row x N-column cell grid: N (칸 수) differs per shelf and comes from `cols` in
+  // the source data, adjustable per shelf in the 재고 현황 tab. One product per cell.
+  // A pallet has no such structure, so it keeps a plain product list.
+  //   shelves/<id>  = { cols, cells:[ {name,qty,expiry,lot} | null, ... 2*cols ], updatedAt }
+  //   pallets/<id>  = { items:[ {name,qty,expiry,lot}, ... ], updatedAt }
+  // cells are indexed row*cols + col, row 0 = 위 단.
+  var GRID_ROWS = 2, DEFAULT_COLS = 4, MAX_COLS = 20;
+
+  var backdrop = document.getElementById('modalBackdrop');
+  var modalTitle = document.getElementById('modalTitle');
+  var itemRowsEl = document.getElementById('itemRows');
+  var addRowBtn = document.getElementById('addRow');
+  var saveBtn = document.getElementById('saveBtn');
+  var clearBtn = document.getElementById('clearBtn');
+  var saveState = document.getElementById('saveState');
+  var modalClose = document.getElementById('modalClose');
+
+  var db = null, auth = null;
+  var myTier = 0, myEmail = null;           // 0 = logged out/no role, 1, 2 -- set from roles/{uid}
+  function canEdit(){ return myTier >= 1; }
+  function canResize(){ return myTier >= 2; }
+  var active = null;                        // { mode:'cell'|'list', collection, id, index }
+  var stock = { shelves:{}, pallets:{} };   // id -> the doc as the live snapshot last saw it
+  var shelfIndex = {};
+  groups.shelf.forEach(function(p){ shelfIndex[p.id] = p; });
+
+  function filled(it){ return !!(it && (it.name || it.qty || it.threshold || it.expiry || it.lot)); }
+
+  // a cell holds a LIST of products, not just one. Saves written before that change stored a
+  // single object per cell, so always read a cell through here rather than using cells[i] raw.
+  function cellItems(cell){
+    if (!cell) return [];
+    return (Array.isArray(cell) ? cell : [cell]).filter(filled);
+  }
+  // Firestore rejects an array nested directly inside another array -- a cell holding several
+  // products is exactly that (cells: [ [itemA, itemB], null, ... ]) -- so a multi-item cell is
+  // wrapped in a plain object going out and unwrapped coming back, only at the Firestore boundary.
+  function packCell(cell){ return Array.isArray(cell) ? { list: cell } : cell; }
+  function unpackCell(cell){ return (cell && cell.list) ? cell.list : cell; }
+  function cellCount(cells){
+    return cells.reduce(function(sum, c){ return sum + cellItems(c).length; }, 0);
+  }
+  function usedCells(cells){
+    return cells.filter(function(c){ return cellItems(c).length > 0; }).length;
+  }
+
+  // the grid a shelf should display right now: what's saved, or -- before anything is saved --
+  // the shelf's own 칸 수 from the source data. A doc written by the older list-only editor is
+  // laid into the grid in order, so nothing registered back then disappears.
+  function gridOf(p, data){
+    var cols, cells;
+    if (data && data.cells && data.cells.length){
+      cols = data.cols || Math.ceil(data.cells.length / GRID_ROWS);
+      cells = data.cells.slice(0, GRID_ROWS * cols);
+    } else {
+      cols = p.cols || DEFAULT_COLS;
+      var items = ((data && data.items) || []).filter(filled);
+      if (items.length > GRID_ROWS * cols) cols = Math.ceil(items.length / GRID_ROWS);
+      cells = items.slice(0, GRID_ROWS * cols);
+    }
+    while (cells.length < GRID_ROWS * cols) cells.push(null);
+    return { cols: cols, cells: cells };
+  }
+
+  // reads a pallet unit's own saved doc first; if a cluster has never been saved under its group
+  // id, merge each member pallet's original per-id doc instead, so nothing entered before
+  // clustering existed appears to have vanished.
+  function palletItems(unit){
+    var data = stock.pallets[unit.id];
+    if (data && data.items && data.items.length) return data.items.filter(filled);
+    // a cluster's shape isn't fixed -- moving even one pallet a few px can change which pallets
+    // count as "touching" (see CLUSTER_GAP below), which changes the group's computed id (it's
+    // named after whichever member reads first). That would silently orphan stock saved under
+    // the group's OLD id. Recover it: any current member may have once been a different cluster's
+    // first member, so check each member's own doc AND the group doc its own id would have named.
+    return unit.members.reduce(function(acc, p){
+      acc = acc.concat((((stock.pallets[p.id] || {}).items) || []).filter(filled));
+      var oldGroupId = 'pgroup-' + p.id;
+      if (oldGroupId !== unit.id){
+        acc = acc.concat((((stock.pallets[oldGroupId] || {}).items) || []).filter(filled));
+      }
+      return acc;
+    }, []);
+  }
+
+  function countOf(p, collection){
+    return collection === 'shelves'
+      ? cellCount(gridOf(p, stock.shelves[p.id]).cells)
+      : palletItems(p).length;
+  }
+
+  // 유통기한 that has passed, or is within 30 days, is worth seeing without opening anything.
+  function expiryClass(expiry){
+    if (!expiry) return '';
+    var t = Date.parse(expiry + 'T00:00:00');
+    if (isNaN(t)) return '';
+    var days = Math.floor((t - Date.now()) / 86400000);
+    return days < 0 ? 'exp-over' : (days <= 30 ? 'exp-warn' : '');
+  }
+
+  // 재고 부족은 더 이상 위치 하나만 보고 판단하지 않는다 -- 같은 제품명 + 같은 로트번호를 가진
+  // 항목을 모든 위치(선반 칸 + 팔레트)에서 모아 수량을 합산하고, 그 중 하나에라도 입력된
+  // 기준수량과 비교한다. buildLowStockGroups()가 refresh()마다 다시 계산해 채워 둔다.
+  function lowStockKey(it){
+    return (it.name || '').trim().toLowerCase() + ' ' + (it.lot || '').trim().toLowerCase();
+  }
+
+  var lowStockGroups = {};
+  function buildLowStockGroups(){
+    var map = {};
+    function add(it){
+      if (!filled(it) || !it.name) return;
+      var key = lowStockKey(it);
+      var g = map[key] || (map[key] = { qty: 0, threshold: null });
+      var q = parseInt(it.qty, 10);
+      if (!isNaN(q)) g.qty += q;
+      var t = parseInt(it.threshold, 10);
+      if (g.threshold === null && !isNaN(t)) g.threshold = t;
+    }
+    groups.shelf.forEach(function(p){
+      gridOf(p, stock.shelves[p.id]).cells.forEach(function(c){ cellItems(c).forEach(add); });
+    });
+    palletUnits.forEach(function(p){ palletItems(p).forEach(add); });
+    lowStockGroups = map;
+  }
+
+  // 둘 다 앞자리 숫자를 읽을 수 있어야 판단 가능하다 ("10박스"처럼 단위가 붙어도 앞의 10은
+  // 그대로 읽힘) -- 그 숫자는 이제 이 항목 하나가 아니라 같은 제품/로트 그룹의 합계다.
+  function isLowStock(it){
+    if (!it || !it.name) return false;
+    var g = lowStockGroups[lowStockKey(it)];
+    return !!g && g.threshold !== null && g.qty <= g.threshold;
+  }
+
+  function makeRow(name, qty, threshold, expiry, lot){
+    var row = document.createElement('div');
+    row.className = 'item-row';
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.placeholder = '제품명';
+    nameInput.value = name || '';
+    var qtyInput = document.createElement('input');
+    qtyInput.type = 'number'; qtyInput.min = '0'; qtyInput.step = '1';
+    qtyInput.className = 'qty-input'; qtyInput.placeholder = '수량';
+    qtyInput.value = qty || '';
+    var thresholdInput = document.createElement('input');
+    thresholdInput.type = 'number'; thresholdInput.min = '0'; thresholdInput.step = '1';
+    thresholdInput.className = 'qty-input'; thresholdInput.placeholder = '기준수량';
+    thresholdInput.title = '같은 제품명+로트번호는 모든 위치 수량을 합쳐서 이 기준과 비교해요. 저장하면 같은 제품/로트를 가진 다른 위치의 기준수량도 이 값으로 자동으로 맞춰져요.';
+    thresholdInput.value = threshold || '';
+    var expiryInput = document.createElement('input');
+    expiryInput.type = 'date'; expiryInput.title = '유통기한';
+    expiryInput.value = expiry || '';
+    var lotInput = document.createElement('input');
+    lotInput.type = 'text'; lotInput.placeholder = '로트번호';
+    lotInput.value = lot || '';
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button'; delBtn.textContent = '−';
+    delBtn.addEventListener('click', function(){ row.remove(); });
+    row.appendChild(nameInput); row.appendChild(qtyInput); row.appendChild(thresholdInput); row.appendChild(expiryInput); row.appendChild(lotInput); row.appendChild(delBtn);
+    return row;
+  }
+
+  addRowBtn.addEventListener('click', function(){ itemRowsEl.appendChild(makeRow('', '', '', '', '')); });
+
+  // visitors (myTier 0) can open a cell/pallet to look, but never change it -- inputs go
+  // read-only and the buttons that write (add/save/clear/per-row delete) disappear. This is
+  // just UX; the real enforcement is the Firestore rules, since anyone can read the page source.
+  function applyEditability(){
+    var editable = canEdit();
+    addRowBtn.hidden = !editable;
+    saveBtn.hidden = !editable;
+    if (!editable) clearBtn.hidden = true;
+    Array.prototype.forEach.call(itemRowsEl.querySelectorAll('input'), function(inp){ inp.readOnly = !editable; });
+    Array.prototype.forEach.call(itemRowsEl.querySelectorAll('.item-row > button'), function(btn){ btn.hidden = !editable; });
+    if (!editable && db) saveState.textContent = '조회 전용이에요 -- 관리자로 로그인하면 수정할 수 있어요';
+  }
+
+  function readRows(){
+    return Array.prototype.slice.call(itemRowsEl.children).map(function(row){
+      var inputs = row.querySelectorAll('input');
+      return {
+        name: inputs[0].value.trim(),
+        qty: inputs[1].value.trim(),
+        threshold: inputs[2].value.trim(),
+        expiry: inputs[3].value.trim(),
+        lot: inputs[4].value.trim()
+      };
+    }).filter(function(it){ return it.name || it.qty || it.threshold || it.expiry || it.lot; });
+  }
+
+  function renderRows(items){
+    itemRowsEl.innerHTML = '';
+    if (!items || !items.length){ itemRowsEl.appendChild(makeRow('', '', '', '', '')); return; }
+    items.forEach(function(it){ itemRowsEl.appendChild(makeRow(it.name, it.qty, it.threshold, it.expiry, it.lot)); });
+  }
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var modalGen = 0; // bumped on every open, so a stale close-timeout can't hide a modal reopened during its animation
+  // exit mirrors the entrance path (fade + settle) instead of the backdrop just vanishing --
+  // skipped entirely under reduced motion, where it would just be a pointless delay.
+  function closeModal(){
+    if (backdrop.hidden) return;
+    active = null;
+    if (reduceMotion.matches){ backdrop.hidden = true; return; }
+    var gen = ++modalGen;
+    backdrop.classList.add('closing');
+    setTimeout(function(){
+      if (gen !== modalGen) return; // a new modal opened mid-close; leave it alone
+      backdrop.hidden = true;
+      backdrop.classList.remove('closing');
+    }, 160);
+  }
+  modalClose.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', function(e){ if (e.target === backdrop) closeModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !backdrop.hidden) closeModal(); });
+
+  function lastSaved(data){
+    return (data && data.updatedAt) ? ('마지막 수정: ' + new Date(data.updatedAt).toLocaleString('ko-KR')) : '';
+  }
+
+  // one cell of one shelf. Rendered straight from the live snapshot rather than re-fetching --
+  // `stock` is already kept current by the listeners at the bottom of this file.
+  function openCell(p, index){
+    if (!canEdit()) return;
+    var data = stock.shelves[p.id];
+    var g = gridOf(p, data);
+    active = { mode:'cell', collection:'shelves', id:p.id, index:index, label:(p.label || '선반'), before: cellItems(g.cells[index]), expectedRevision: (data && data._revision) || 0 };
+    modalTitle.textContent = (p.label || '선반') + ' · ' + (Math.floor(index/g.cols)+1) + '단 ' + (index % g.cols + 1) + '칸';
+    addRowBtn.hidden = false;
+    clearBtn.hidden = false;
+    itemRowsEl.dataset.mode = 'list';
+    renderRows(cellItems(g.cells[index]));
+    saveState.textContent = db ? lastSaved(data) : '이 미리보기에서는 저장이 지원되지 않아요';
+    applyEditability();
+    modalGen++;
+    backdrop.classList.remove('closing');
+    backdrop.hidden = false;
+    var first = itemRowsEl.querySelector('input');
+    if (first && canEdit()) first.focus();
+  }
+
+  function openList(p){
+    if (!canEdit()) return;
+    active = { mode:'list', collection:'pallets', id:p.id, label:(p.label || '팔레트'), before: palletItems(p), expectedRevision: (stock.pallets[p.id] && stock.pallets[p.id]._revision) || 0 };
+    modalTitle.textContent = (p.label || '팔레트') + (p.members && p.members.length > 1 ? ' (팔레트 ' + p.members.length + '개)' : '');
+    addRowBtn.hidden = false;
+    clearBtn.hidden = true;
+    itemRowsEl.dataset.mode = 'list';
+    renderRows(palletItems(p));
+    saveState.textContent = db ? lastSaved(stock.pallets[p.id]) : '이 미리보기에서는 저장이 지원되지 않아요';
+    applyEditability();
+    modalGen++;
+    backdrop.classList.remove('closing');
+    backdrop.hidden = false;
+  }
+
+  // 저장하는 위치에 기준수량이 입력돼 있으면, 같은 제품명+로트번호를 가진 다른 모든 위치의
+  // 기준수량도 같은 값으로 맞춰 같은 배치에 함께 저장한다 -- 위치마다 다른 값이 남아 있으면
+  // 재고 부족 판정이 어느 쪽 기준을 따르는지 알 수 없어지므로, 애초에 서로 달라질 수 없게 한다.
+  // ponytail: 지금 저장 중인 위치 자체는 스캔 대상에서 제외한다 (그 위치는 rows로 이미 반영됨) --
+  // 같은 선반의 다른 칸에 같은 제품/로트가 또 있다면 이번 배치엔 안 실리고, 다음 저장 때 맞춰진다.
+  // computeThresholdSyncs only reads -- it's safe to call before the save confirm to find out
+  // which other locations would change, without touching `stock` or Firestore. applyThresholdSyncs
+  // then does the actual write (called only once the user has confirmed).
+  function computeThresholdSyncs(rows, skipCollection, skipId){
+    var updates = {};
+    rows.forEach(function(it){
+      if (!filled(it) || !it.name || !it.threshold) return;
+      var t = parseInt(it.threshold, 10);
+      if (!isNaN(t)) updates[lowStockKey(it)] = String(t);
+    });
+    if (!Object.keys(updates).length) return [];
+
+    function syncItems(items){
+      var changed = false;
+      var next = items.map(function(it){
+        var want = updates[lowStockKey(it)];
+        if (want === undefined || String(it.threshold || '') === want) return it;
+        changed = true;
+        var copy = {};
+        for (var k in it) copy[k] = it[k];
+        copy.threshold = want;
+        return copy;
+      });
+      return changed ? next : null;
+    }
+
+    var synced = [];
+    groups.shelf.forEach(function(p){
+      if (skipCollection === 'shelves' && skipId === p.id) return;
+      var g = gridOf(p, stock.shelves[p.id]);
+      var before = [], after = [], changed = false;
+      var newCells = g.cells.map(function(cell){
+        var items = cellItems(cell);
+        if (!items.length) return cell;
+        var next = syncItems(items);
+        if (!next) return cell;
+        changed = true;
+        before = before.concat(items);
+        after = after.concat(next);
+        return next;
+      });
+      if (!changed) return;
+      synced.push({ collection: 'shelves', id: p.id, label: p.label || '선반', cols: g.cols, cells: newCells, before: before, after: after });
+    });
+
+    palletUnits.forEach(function(p){
+      if (skipCollection === 'pallets' && skipId === p.id) return;
+      var items = palletItems(p);
+      if (!items.length) return;
+      var next = syncItems(items);
+      if (!next) return;
+      synced.push({ collection: 'pallets', id: p.id, label: p.label || '팔레트', items: next, before: items, after: next });
+    });
+
+    return synced;
+  }
+
+  function applyThresholdSyncs(synced, batch){
+    synced.forEach(function(s){
+      var updatedAt = Date.now();
+      if (s.collection === 'shelves'){
+
+        batch.push({path:'shelves/' + s.id, data:{ cols:s.cols,cells:s.cells.map(packCell),updatedAt:updatedAt },expectedRevision:(stock.shelves[s.id] && stock.shelves[s.id]._revision)||0});
+      } else {
+
+        batch.push({path:'pallets/' + s.id,data:{items:s.items,updatedAt:updatedAt},expectedRevision:(stock.pallets[s.id] && stock.pallets[s.id]._revision)||0});
+      }
+    });
+  }
+
+  // 같은 위치 안에서도 (예: 팔레트 목록에 같은 제품/로트가 여러 줄로) 서로 다른 기준수량을 적어
+  // 놓고 저장할 수 있었던 구멍 -- computeThresholdSyncs는 "다른 위치"만 맞춰 줬지, 지금 막
+  // 저장하는 rows 자체는 그대로 저장했었다. 저장 직전에 rows 안에서부터 먼저 통일시킨다
+  // (같은 제품/로트 중 마지막으로 입력된 값을 그 그룹 전체에 적용).
+  function normalizeThresholds(rows){
+    var chosen = {};
+    rows.forEach(function(it){
+      if (!filled(it) || !it.name || !it.threshold) return;
+      var t = parseInt(it.threshold, 10);
+      if (!isNaN(t)) chosen[lowStockKey(it)] = String(t);
+    });
+    if (!Object.keys(chosen).length) return rows;
+    return rows.map(function(it){
+      if (!filled(it) || !it.name) return it;
+      var want = chosen[lowStockKey(it)];
+      if (want === undefined || String(it.threshold || '') === want) return it;
+      var copy = {};
+      for (var k in it) copy[k] = it[k];
+      copy.threshold = want;
+      return copy;
+    });
+  }
+
+  saveBtn.addEventListener('click', function(){
+    if (!active || !canEdit()) return;
+    if (!db){ saveState.textContent = '저장이 지원되지 않아요'; return; }
+    var badInput = Array.prototype.find.call(itemRowsEl.querySelectorAll('.qty-input'), function(inp){ return !inp.checkValidity(); });
+    if (badInput){ badInput.reportValidity(); return; }
+    var target = active, rows = normalizeThresholds(readRows()), payload, loc;
+    if (target.mode === 'cell'){
+      // read-modify-write the whole grid: only this one cell changes, and `cols` is carried
+      // through so a shelf that has never been saved keeps the 칸 수 it was drawn with.
+      var g = gridOf(shelfIndex[target.id], stock.shelves[target.id]);
+      g.cells[target.index] = rows.length ? rows : null;
+      payload = { cols: g.cols, cells: g.cells, updatedAt: Date.now() };
+      loc = target.label + ' ' + (Math.floor(target.index/g.cols)+1) + '단 ' + (target.index % g.cols + 1) + '칸';
+    } else {
+      payload = { items: rows, updatedAt: Date.now() };
+      loc = target.label;
+    }
+    var synced = computeThresholdSyncs(rows, target.collection, target.id);
+    var confirmMsg = loc + ' 재고를 저장할까요?';
+    if (synced.length){
+      confirmMsg += '\n\n같은 제품/로트를 쓰는 다른 위치 ' + synced.length + '곳의 기준수량도 이 값으로 함께 맞춰져요: '
+        + synced.map(function(s){ return s.label; }).join(', ');
+    }
+    if (!window.confirm(confirmMsg)) return;
+    saveBtn.disabled = true;
+    saveState.textContent = '저장 중…';
+
+    var firePayload = target.mode === 'cell'
+      ? { cols: payload.cols, cells: payload.cells.map(packCell), updatedAt: payload.updatedAt }
+      : payload;
+    var batch = [{path:target.collection + '/' + target.id,data:firePayload,expectedRevision:target.expectedRevision}];
+    applyThresholdSyncs(synced, batch);
+    refresh();
+    InventorySecurity.save(batch).then(function(){
+      saveBtn.disabled = false;
+      if (active === target) closeModal();
+    }).catch(function(error){
+      saveBtn.disabled = false;
+      if (active === target) saveState.textContent = error.message;
+    });
+  });
+
+  // "비우기" just empties the inputs and saves through the same path -- readRows() drops the
+  // blank row, so the cell is written as null.
+  clearBtn.addEventListener('click', function(){ if (!canEdit()) return; renderRows([]); saveBtn.click(); });
+
+  function setCols(p, cols){
+    if (!db || !canResize() || cols < 1 || cols > MAX_COLS) return;
+    var g = gridOf(p, stock.shelves[p.id]);
+    var beforeCols = g.cols;
+    var next = [];
+    for (var r = 0; r < GRID_ROWS; r++)
+      for (var c = 0; c < cols; c++)
+        next.push(c < g.cols ? (g.cells[r*g.cols + c] || null) : null);
+    var payload = { cols: cols, cells: next, updatedAt: Date.now() };
+    InventorySecurity.save([{path:'shelves/'+p.id,data:{cols:cols,cells:next.map(packCell),updatedAt:payload.updatedAt},
+      expectedRevision:(stock.shelves[p.id] && stock.shelves[p.id]._revision)||0}])
+      .catch(function(error){ alert(error.message); });
+  }
+
+  // ---- 재고 현황 tab: every location as a card, shelves drawn as their own 2 x N cell grid ----
+  var tabs = { plan: document.getElementById('tabPlan'), stock: document.getElementById('tabStock') };
+  var panels = { plan: document.getElementById('panelPlan'), stock: document.getElementById('panelStock') };
+  var stockGrid = document.getElementById('stockGrid');
+  var stockSearch = document.getElementById('stockSearch');
+  var showEmptyEl = document.getElementById('showEmpty');
+  var stockSummary = document.getElementById('stockSummary');
+  var lowStockChip = document.getElementById('lowStockChip');
+  var lowStockOnly = false;
+  function syncLowStockChip(){
+    lowStockChip.setAttribute('aria-pressed', String(lowStockOnly));
+  }
+  lowStockChip.addEventListener('click', function(){
+    lowStockOnly = !lowStockOnly;
+    syncLowStockChip();
+    renderStock();
+  });
+
+  function setTab(name){
+    Object.keys(panels).forEach(function(k){
+      panels[k].hidden = (k !== name);
+      tabs[k].setAttribute('aria-selected', String(k === name));
+    });
+  }
+  tabs.plan.addEventListener('click', function(){ setTab('plan'); });
+  tabs.stock.addEventListener('click', function(){ setTab('stock'); });
+
+  function h(tag, cls, text){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // cards carry the same category tint as the shape on the drawing, so a card and its shelf are
+  // recognisably the same thing across the two tabs.
+  function catTint(label){
+    var m = CATEGORY_FILL.filter(function(c){ return label && label.indexOf(c.prefix) === 0; })[0];
+    return m ? m.fill : 'var(--border)';
+  }
+
+  function cellButton(p, g, i){
+    var items = cellItems(g.cells[i]);
+    var row = Math.floor(i/g.cols) + 1, col = (i % g.cols) + 1;
+    var b = h('button', 'cell');
+    b.type = 'button';
+    var pos = h('span', 'pos', row + '-' + col + (items.length > 1 ? ' · ' + items.length + '건' : ''));
+    b.appendChild(pos);
+    if (items.length){
+      items.forEach(function(it){
+        var line = h('div', 'cell-item');
+        var low = isLowStock(it);
+        line.appendChild(h('span', 'nm' + (low ? ' stock-low' : ''), (low ? '⚠ ' : '') + (it.name || '(이름 없음)')));
+        var sub = [];
+        if (it.qty) sub.push(it.qty);
+        if (it.lot) sub.push(it.lot);
+        if (sub.length) line.appendChild(h('span', 'sub', sub.join(' · ')));
+        if (it.expiry) line.appendChild(h('span', 'sub ' + expiryClass(it.expiry), it.expiry));
+        b.appendChild(line);
+      });
+    } else {
+      b.classList.add('empty');
+      b.appendChild(h('span', null, '+'));
+    }
+    b.title = (p.label || '선반') + ' ' + row + '단 ' + col + '칸 — ' + (items.length ? '클릭해서 수정·추가' : '클릭해서 제품 등록');
+    b.addEventListener('click', function(){ openCell(p, i); });
+    return b;
+  }
+
+  function shelfCard(p){
+    var g = gridOf(p, stock.shelves[p.id]);
+    var n = cellCount(g.cells);
+    var card = h('div', 'stock-card' + (n ? '' : ' is-empty'));
+    card.id = 'card-shelves-' + p.id;
+    var tint = h('div', 'stock-tint');
+    tint.style.background = catTint(p.label);
+    card.appendChild(tint);
+
+    var head = h('div', 'stock-head');
+    head.appendChild(h('b', null, p.label || '선반'));
+    head.appendChild(h('span', 'n', n + '건 · ' + usedCells(g.cells) + '/' + (GRID_ROWS*g.cols) + '칸'));
+    var step = h('div', 'col-step spacer');
+    // resizing (칸 수 조절) is a 2단계 관리자-only power -- everyone else just sees the count.
+    if (canResize()){
+      var minus = h('button', null, '−');
+      minus.type = 'button';
+      // a column that still holds something is never dropped silently -- empty it first.
+      var lastColUsed = g.cells.some(function(c, i){ return cellItems(c).length && (i % g.cols) === g.cols - 1; });
+      minus.disabled = !db || g.cols <= 1 || lastColUsed;
+      minus.title = lastColUsed ? '마지막 칸에 제품이 있어 줄일 수 없어요' : '칸 줄이기';
+      minus.addEventListener('click', function(){ setCols(p, g.cols - 1); });
+      var plus = h('button', null, '+');
+      plus.type = 'button';
+      plus.disabled = !db || g.cols >= MAX_COLS;
+      plus.title = '칸 늘리기';
+      plus.addEventListener('click', function(){ setCols(p, g.cols + 1); });
+      step.appendChild(minus);
+    }
+    step.appendChild(h('span', null, GRID_ROWS + ' × ' + g.cols));
+    if (canResize()) step.appendChild(plus);
+    head.appendChild(step);
+    card.appendChild(head);
+
+    var scroll = h('div', 'cell-scroll');
+    var grid = h('div', 'cell-grid');
+    grid.style.gridTemplateColumns = 'repeat(' + g.cols + ', minmax(92px, 1fr))';
+    for (var i = 0; i < g.cells.length; i++) grid.appendChild(cellButton(p, g, i));
+    scroll.appendChild(grid);
+    card.appendChild(scroll);
+    return card;
+  }
+
+  function palletCard(p){
+    var items = palletItems(p);
+    var card = h('div', 'stock-card' + (items.length ? '' : ' is-empty'));
+    card.id = 'card-pallets-' + p.id;
+    card.appendChild(h('div', 'stock-tint'));
+
+    var head = h('div', 'stock-head');
+    head.appendChild(h('b', null, p.label || '팔레트'));
+    head.appendChild(h('span', 'n', items.length + '개' + (p.members.length > 1 ? ' · 팔레트 ' + p.members.length + '개' : '')));
+    var edit = h('button', 'edit-link spacer', canEdit() ? '편집' : '보기');
+    edit.type = 'button';
+    edit.addEventListener('click', function(){ openList(p); });
+    head.appendChild(edit);
+    card.appendChild(head);
+
+    if (!items.length){
+      card.appendChild(h('div', 'list-empty', '등록된 제품이 없어요'));
+    } else {
+      var list = h('div', 'list-items');
+      items.forEach(function(it){
+        var row = h('div', 'list-item');
+        var low = isLowStock(it);
+        row.appendChild(h('span', low ? 'stock-low' : null, (low ? '⚠ ' : '') + (it.name || '(이름 없음)')));
+        var sub = [];
+        if (it.qty) sub.push(it.qty);
+        if (it.lot) sub.push(it.lot);
+        if (it.expiry) sub.push(it.expiry);
+        row.appendChild(h('span', 'sub ' + (it.expiry ? expiryClass(it.expiry) : ''), sub.join(' · ')));
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+    }
+    return card;
+  }
+
+  // cards are grouped by category first -- 제품, 부자재, 기계팀 -- and everything else follows in
+  // ㄱㄴㄷ order; within a category the labels sort naturally (선반 2 before 선반 10).
+  var CATEGORY_ORDER = ['제품', '부자재', '기계팀'];
+  function shelfRank(label){
+    for (var i = 0; i < CATEGORY_ORDER.length; i++)
+      if ((label || '').indexOf(CATEGORY_ORDER[i]) === 0) return i;
+    return CATEGORY_ORDER.length;
+  }
+  function byShelfOrder(a, b){
+    var ra = shelfRank(a.label), rb = shelfRank(b.label);
+    if (ra !== rb) return ra - rb;
+    return (a.label || '').localeCompare(b.label || '', 'ko', { numeric:true });
+  }
+
+  function itemMatchesQuery(it, q){
+    return (it.name || '').toLowerCase().indexOf(q) !== -1 ||
+      (it.lot || '').toLowerCase().indexOf(q) !== -1;
+  }
+
+  function matches(q, label, entries){
+    if (!q) return true;
+    if ((label || '').toLowerCase().indexOf(q) !== -1) return true;
+    return entries.some(function(c){ return filled(c) && itemMatchesQuery(c, q); });
+  }
+
+  function renderStock(){
+    var q = (stockSearch.value || '').trim().toLowerCase();
+    var showEmpty = showEmptyEl.checked;
+    stockGrid.innerHTML = '';
+    var shown = 0, products = 0, usedLocations = 0;
+    // while searching or filtering to just low-stock items, the header should answer "그 제품이
+    // 어디에 몇 건 있는지" -- not the grand total -- so count separately how many
+    // locations/entries actually match, instead of always showing the site-wide totals.
+    var qLocations = 0, qEntries = 0;
+    function countHits(items){
+      if (!q && !lowStockOnly) return 0;
+      return items.filter(function(it){
+        if (!filled(it)) return false;
+        if (lowStockOnly && !isLowStock(it)) return false;
+        if (q && !itemMatchesQuery(it, q)) return false;
+        return true;
+      }).length;
+    }
+    // 재고 부족 필터가 켜져 있으면 위치 이름 매치는 무시하고, 부족한 제품을 가진 위치만 보여준다
+    // (검색어가 같이 입력돼 있으면 그 제품명과도 일치해야 한다).
+    function cardVisible(label, items){
+      if (lowStockOnly){
+        return items.some(function(it){ return isLowStock(it) && (!q || itemMatchesQuery(it, q)); });
+      }
+      return matches(q, label, items);
+    }
+
+    groups.shelf.slice().sort(byShelfOrder).forEach(function(p){
+      var cells = gridOf(p, stock.shelves[p.id]).cells;
+      var items = cells.reduce(function(acc, c){ return acc.concat(cellItems(c)); }, []);
+      products += items.length;
+      if (items.length) usedLocations++;
+      var hits = countHits(items);
+      if (hits){ qLocations++; qEntries += hits; }
+      if ((!items.length && !showEmpty) || !cardVisible(p.label, items)) return;
+      stockGrid.appendChild(shelfCard(p));
+      shown++;
+    });
+
+    palletUnits.slice().sort(function(a,b){
+      return (a.label || '').localeCompare(b.label || '', 'ko', { numeric:true });
+    }).forEach(function(p){
+      var items = palletItems(p);
+      products += items.length;
+      if (items.length) usedLocations++;
+      var hits = countHits(items);
+      if (hits){ qLocations++; qEntries += hits; }
+      if ((!items.length && !showEmpty) || !cardVisible(p.label, items)) return;
+      stockGrid.appendChild(palletCard(p));
+      shown++;
+    });
+
+    if (!shown){
+      stockGrid.appendChild(h('div', 'stock-blank', db ? '조건에 맞는 위치가 없어요' : '이 미리보기에서는 저장된 재고를 불러올 수 없어요'));
+    }
+    stockSummary.textContent = (q || lowStockOnly)
+      ? (lowStockOnly ? '재고 부족 · ' : '검색 결과 · ') + '위치 ' + qLocations + '곳 · 제품 ' + qEntries + '건'
+      : '위치 ' + usedLocations + '곳 · 제품 ' + products + '건';
+  }
+  stockSearch.addEventListener('input', renderStock);
+  showEmptyEl.addEventListener('change', renderStock);
+
+  // clicking a shelf on the drawing takes you to that shelf's grid -- the grid is the one place
+  // shelf stock is edited, so the map never opens a second, competing editor for it.
+  function focusCard(collection, id){
+    setTab('stock');
+    var card = document.getElementById('card-' + collection + '-' + id);
+    if (!card){
+      // it was filtered out of the current view -- clear the filters so it can be reached
+      stockSearch.value = '';
+      showEmptyEl.checked = true;
+      renderStock();
+      card = document.getElementById('card-' + collection + '-' + id);
+    }
+    if (!card) return;
+    card.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block:'center' });
+    card.classList.add('flash');
+    setTimeout(function(){ card.classList.remove('flash'); }, 1400);
+  }
+
+  // shapes were only ever clickable with a mouse/touch pointer -- no way to reach the stock
+  // editor from a keyboard alone. Make every clickable shape a real button: focusable, announced
+  // by a screen reader, and activatable with Enter/Space, not just a pointer click.
+  function makeInteractive(rect, label, onActivate){
+    rect.setAttribute('tabindex', '0');
+    rect.setAttribute('role', 'button');
+    rect.setAttribute('aria-label', label);
+    rect.addEventListener('click', onActivate);
+    rect.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar'){
+        e.preventDefault();
+        onActivate();
+      }
+    });
+  }
+
+  groups.shelf.forEach(function(p){
+    // fall back to a plain "선반" for shelves the source text never labelled, so every
+    // shelf -- not just the ones with an obvious name -- can still be told apart and managed.
+    var shelfLabel = p.label || '선반';
+    p._rect.classList.add('shelf-rect');
+    var title = el('title', {});
+    // a dashed red outline (set earlier, at match time) means this label's position was guessed
+    // by proximity rather than found inside this shape -- call that out here too, since the
+    // tooltip is the one place someone hovering the shape will actually see it.
+    title.textContent = shelfLabel + (p._uncertainMatch ? ' (⚠ 라벨 매칭 불확실 - 위치 확인 필요)' : '') + ' — 클릭해서 칸별 재고 보기';
+    p._rect.appendChild(title);
+    makeInteractive(p._rect, title.textContent, function(){ focusCard('shelves', p.id); });
+  });
+
+  groups.pallet.forEach(function(p){
+    p._rect.classList.add('shelf-rect');
+    var title = el('title', {});
+    var clusterNote = p._unit.members.length > 1 ? ' (' + p._unit.label + ')' : '';
+    title.textContent = (p.label || '팔레트') + clusterNote + (p._uncertainMatch ? ' (⚠ 라벨 매칭 불확실 - 위치 확인 필요)' : '') + ' — 클릭해서 제품 관리';
+    p._rect.appendChild(title);
+    makeInteractive(p._rect, title.textContent, function(){ openList(p._unit); });
+  });
+
+  var statsRow = document.getElementById('statsRow');
+  var totalLocations = groups.shelf.length + palletUnits.length;
+
+  function countLowStock(){
+    var n = 0;
+    groups.shelf.forEach(function(p){
+      gridOf(p, stock.shelves[p.id]).cells.forEach(function(c){
+        cellItems(c).forEach(function(it){ if (isLowStock(it)) n++; });
+      });
+    });
+    palletUnits.forEach(function(p){
+      palletItems(p).forEach(function(it){ if (isLowStock(it)) n++; });
+    });
+    return n;
+  }
+
+  function renderStats(){
+    var registered = groups.shelf.filter(function(p){ return countOf(p, 'shelves'); }).length
+                   + palletUnits.filter(function(p){ return countOf(p, 'pallets'); }).length;
+    var low = countLowStock();
+    statsRow.innerHTML = '';
+    var chip = document.createElement('div');
+    chip.className = 'stat-chip';
+    chip.innerHTML = '<b class="num">' + registered + ' / ' + totalLocations + '</b><span>위치 등록됨</span>';
+    statsRow.appendChild(chip);
+    var lowChip = document.createElement('button');
+    lowChip.type = 'button';
+    lowChip.className = 'stat-chip stat-chip-btn' + (low ? ' stat-chip-warn' : '');
+    lowChip.disabled = !low;
+    lowChip.innerHTML = '<b class="num">' + low + '</b><span>재고 부족</span>';
+    lowChip.addEventListener('click', function(){
+      if (!low) return;
+      lowStockOnly = true;
+      stockSearch.value = '';
+      syncLowStockChip();
+      setTab('stock');
+      renderStock();
+    });
+    statsRow.appendChild(lowChip);
+  }
+
+  function refresh(){
+    buildLowStockGroups();
+    renderStats();
+    renderStock();
+  }
+  refresh();
+
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyDHSvdVLhkOHWs1whqkJ4pyol69S6P5C4M",
+    authDomain: "warehouse-inventory-84fef.firebaseapp.com",
+    projectId: "warehouse-inventory-84fef",
+    storageBucket: "warehouse-inventory-84fef.firebasestorage.app",
+    messagingSenderId: "148799748197",
+    appId: "1:148799748197:web:01f8b6022b7e471e306e8c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+  // re-render as soon as the handle exists, without waiting for a snapshot: the controls that
+  // write (칸 수 +/-) are disabled until `db` is set, and a warehouse with nothing saved yet
+  // may never get a snapshot to trigger that re-render, which would leave them stuck off.
+  refresh();
+
+  // ---- admin login: role (1단계/2단계) lives in roles/{uid}, set by hand in the console --
+  // signing in alone grants nothing, the role doc is what the Firestore rules actually check.
+  var authBox = document.getElementById('authBox');
+  var loginBackdrop = document.getElementById('loginBackdrop');
+  var loginForm = document.getElementById('loginForm');
+  var loginEmail = document.getElementById('loginEmail');
+  var loginPassword = document.getElementById('loginPassword');
+  var loginError = document.getElementById('loginError');
+  var loginSubmit = document.getElementById('loginSubmit');
+  var loginClose = document.getElementById('loginClose');
+
+  function openLoginModal(){
+    loginError.textContent = '';
+    loginForm.reset();
+    loginBackdrop.hidden = false;
+    loginEmail.focus();
+  }
+  function closeLoginModal(){ loginPassword.value = ''; loginBackdrop.hidden = true; }
+  loginClose.addEventListener('click', closeLoginModal);
+  loginBackdrop.addEventListener('click', function(e){ if (e.target === loginBackdrop) closeLoginModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !loginBackdrop.hidden) closeLoginModal(); });
+
+  loginForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    loginSubmit.disabled = true;
+    loginError.textContent = '';
+    auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value)
+      .then(function(){ loginSubmit.disabled = false; closeLoginModal(); })
+      .catch(function(){
+        loginSubmit.disabled = false;
+        loginError.textContent = '이메일 또는 비밀번호가 올바르지 않아요';
+      });
+  });
+
+  var auditBackdrop = document.getElementById('auditBackdrop');
+  var auditClose = document.getElementById('auditClose');
+  var auditList = document.getElementById('auditList');
+  function closeAuditModal(){ auditBackdrop.hidden = true; }
+  auditClose.addEventListener('click', closeAuditModal);
+  auditBackdrop.addEventListener('click', function(e){ if (e.target === auditBackdrop) closeAuditModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !auditBackdrop.hidden) closeAuditModal(); });
+
+  function openAuditModal(){
+    auditList.innerHTML = '';
+    auditList.appendChild(h('div', 'list-empty', '불러오는 중…'));
+    auditBackdrop.hidden = false;
+    db.collection('auditLog').orderBy('ts', 'desc').limit(200).get().then(function(snap){
+      auditList.innerHTML = '';
+      if (snap.empty){ auditList.appendChild(h('div', 'list-empty', '기록이 없어요')); return; }
+      var list = h('div', 'list-items');
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var when = (d.ts && d.ts.toDate) ? d.ts.toDate().toLocaleString('ko-KR') : '';
+        var row = h('div', 'list-item');
+        row.appendChild(h('span', null, (d.by || '') + ' · ' + (d.location || '') + ' · ' + d.before + ' → ' + d.after));
+        row.appendChild(h('span', 'sub', when));
+        list.appendChild(row);
+      });
+      auditList.appendChild(list);
+    }).catch(function(){
+      auditList.innerHTML = '';
+      auditList.appendChild(h('div', 'list-empty', '불러오지 못했어요'));
+    });
+  }
+
+  function renderAuthBox(){
+    authBox.innerHTML = '';
+    if (myEmail){
+      var tierLabel = myTier === 2 ? '2단계 관리자' : (myTier === 1 ? '1단계 관리자' : '권한 없음');
+      authBox.appendChild(h('span', null, myEmail + ' · ' + tierLabel));
+      if (myTier === 2){
+        var logBtn = h('button', 'auth-link', '변경 이력'); logBtn.type = 'button';
+        logBtn.addEventListener('click', openAuditModal);
+        authBox.appendChild(logBtn);
+      }
+      var out = h('button', 'auth-link', '로그아웃'); out.type = 'button';
+      out.addEventListener('click', function(){ auth.signOut(); });
+      authBox.appendChild(out);
+    } else {
+      var btn = h('button', 'auth-link', '관리자 로그인'); btn.type = 'button';
+      btn.addEventListener('click', openLoginModal);
+      authBox.appendChild(btn);
+    }
+  }
+
+  var subscriptions = [], roleKey = '', identityGeneration = 0;
+  var accessNotice = document.createElement('p');
+  accessNotice.setAttribute('role','status');
+  document.querySelector('header').after(accessNotice);
+  function clearPrivateView(){
+    subscriptions.forEach(function(stop){stop();}); subscriptions=[];
+    stock={shelves:{},pallets:{}}; active=null;
+    backdrop.hidden=true; auditBackdrop.hidden=true; auditList.textContent='';itemRowsEl.textContent='';
+    refresh();
+  }
+  InventorySecurity.start(firebase.app(),function(identity){
+    var key=identity.user?identity.user.uid+':'+identity.tier:'';
+    myEmail=identity.user?identity.user.email:null;myTier=identity.tier;
+    renderAuthBox();
+    document.body.classList.toggle('inventory-locked',myTier<1);
+    accessNotice.textContent=identity.error?'권한 확인에 실패했습니다. 다시 로그인해 주세요.':
+      !identity.ready?'권한을 확인하고 있습니다.':myTier<1?'승인된 계정으로 로그인하면 재고를 확인할 수 있습니다.':'';
+    if(key===roleKey)return;
+    roleKey=key;var generation=++identityGeneration;clearPrivateView();
+    if(myTier<1)return;
+    ['shelves','pallets'].forEach(function(collection){
+      subscriptions.push(db.collection(collection).onSnapshot(function(snap){
+        if(generation!==identityGeneration)return;
+        var next={};
+        snap.docs.forEach(function(doc){
+          var data=doc.data()||{};
+          if(collection==='shelves' && Array.isArray(data.cells))
+            data={cols:data.cols,cells:data.cells.map(unpackCell),updatedAt:data.updatedAt,_revision:data._revision||0};
+          next[doc.id]=data;
+        });
+        stock[collection]=next;refresh();
+      },function(){
+        ++identityGeneration;clearPrivateView();myTier=0;renderAuthBox();
+        document.body.classList.add('inventory-locked');
+        accessNotice.textContent='데이터를 불러올 수 없습니다. 다시 로그인해 주세요.';
+      }));
+    });
+  });
+})();
