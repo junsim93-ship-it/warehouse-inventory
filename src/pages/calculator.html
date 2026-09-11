@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://asia-northeast3-warehouse-inventory-84fef.cloudfunctions.net; frame-src https://warehouse-inventory-84fef.firebaseapp.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style></head><body>
+<title>부자재 소요량 · 환산재고 계산기</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="vendor/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="vendor/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
+<script src="vendor/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+<script src="vendor/firebase-app-compat.js" integrity="sha384-aUtWR1iCiOCHS8pn1nKNXMZm3I/eDrV63IXWXgE+mHHqJfYTWYV+jGk0sCXz57+U" crossorigin="anonymous"></script>
+<script src="vendor/firebase-firestore-compat.js" integrity="sha384-jxdN9nS+cvQavyzo/bNcMoHfxvk0kWtPAfPDRq3EQ/wvbCVLNheaVIphKWMD4/g0" crossorigin="anonymous"></script>
+<script src="vendor/firebase-auth-compat.js" integrity="sha384-ZRqyA8Xkw0A6FmVya9A0Werzt9yjKKAp2TCzqVJjHK1O3oyb0z9jMxpkWPVoFtUm" crossorigin="anonymous"></script>
+<script src="vendor/firebase-functions-compat.js" integrity="sha384-c4zDGykM7t9cW/0muJ69shtBRJf2JonnZiwcsZVsrWCCwKwpb2buU+tX/RKzD4+I" crossorigin="anonymous"></script>
+<script src="assets/security-client.js" integrity="sha384-Oo/gblMW3/q9QU81c/wsGGxs/zCQIx+v9PPCm19D1knw77gYUyYMjas+I4hg1zSa" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", sans-serif;
+         background: #F4F6F5; color: #15201F; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+</style>
+<div id="root"></div>
+<script src="assets/workbook-client.js" integrity="sha384-s6CDtnjXWOnQ4p1mQXsdsm15P2mrmDNSDXFJTLzBrg//yVM2m9u+Ky9kwlCblDj8" crossorigin="anonymous"></script>
+<script src="assets/calculator.js" integrity="sha384-5O8/L8CD5NFDKP3N7nnAkbuPIdMI5cMAIfZTH+zWbOmMc5IQoaKt/6TBCIGK/GNX" crossorigin="anonymous"></script>
+
+</body></html>

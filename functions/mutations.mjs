@@ -9,6 +9,15 @@ const summary=d=>d==null?'(없음)':d.lots?`재고 ${d.lots.length}개`:d.boms?`
 
 export async function commitMutations(db,auth,mutations,now=Date.now()) {
   if(!auth?.uid) reject('unauthenticated','로그인이 필요합니다.');
+  // Commit the attempt separately so validation/authorization failures cannot roll it back.
+  // This bounds authenticated attempts per UID, not unauthenticated traffic or total billing.
+  const limitRef=db.doc('_writeLimits/'+auth.uid);
+  await db.runTransaction(async tx=>{
+    const limit=(await tx.get(limitRef)).data();
+    const sameWindow=limit && now-limit.startedAt<60_000;
+    if(sameWindow && limit.count>=30) reject('resource-exhausted','요청이 많습니다. 잠시 후 다시 시도하세요.');
+    tx.set(limitRef,{startedAt:sameWindow?limit.startedAt:now,count:sameWindow?limit.count+1:1});
+  });
   if(!Number.isFinite(auth.token?.auth_time)||now/1000-auth.token.auth_time>8*3600)
     reject('unauthenticated','로그인 시간이 만료되었습니다. 다시 로그인해 주세요.');
   if(!Array.isArray(mutations)||mutations.length<1||mutations.length>30||Buffer.byteLength(JSON.stringify(mutations))>3_000_000)
@@ -19,17 +28,14 @@ export async function commitMutations(db,auth,mutations,now=Date.now()) {
   const refs=mutations.map(m=>db.doc(m.path));
   const logs=mutations.map(()=>db.collection('auditLog').doc());
   return db.runTransaction(async tx=>{
-    const roleRef=db.doc('roles/'+auth.uid),limitRef=db.doc('_writeLimits/'+auth.uid);
+    const roleRef=db.doc('roles/'+auth.uid);
     const stockIds=mutations.filter(m=>m.path.startsWith('stock/')).map(m=>m.path.split('/')[1]);
     const backupRefs=stockIds.map(id=>db.doc('stockPrev/'+id));
-    const snaps=await tx.getAll(roleRef,limitRef,...refs,...backupRefs);
+    const snaps=await tx.getAll(roleRef,...refs,...backupRefs);
     const tier=snaps[0].data()?.tier;
     if(tier!==1 && tier!==2) reject('permission-denied','승인된 관리자 권한이 필요합니다.');
-    const limit=snaps[1].data();
-    const sameWindow=limit && now-limit.startedAt<60_000;
-    if(sameWindow && limit.count>=30) reject('resource-exhausted','요청이 많습니다. 잠시 후 다시 시도하세요.');
-    const previous=snaps.slice(2,2+refs.length).map(s=>s.exists?s.data():null);
-    const backups=new Map(stockIds.map((id,i)=>[id,snaps[2+refs.length+i].data()??null]));
+    const previous=snaps.slice(1,1+refs.length).map(s=>s.exists?s.data():null);
+    const backups=new Map(stockIds.map((id,i)=>[id,snaps[1+refs.length+i].data()??null]));
     const values=mutations.map((m,i)=>{
       try {authorize(tier,m.path);validateMutation(m,tier,previous[i]);}
       catch(e){if(e instanceof ValidationError) reject('invalid-argument',e.message);throw e;}
@@ -46,7 +52,6 @@ export async function commitMutations(db,auth,mutations,now=Date.now()) {
       if(m.path.startsWith('shelves/')||m.path.startsWith('pallets/'))result.updatedAt=now;
       return result;
     });
-    tx.set(limitRef,{startedAt:sameWindow?limit.startedAt:now,count:sameWindow?limit.count+1:1});
     mutations.forEach((m,i)=>{
       const before=previous[i],after=values[i],log=logs[i];
       if(m.path.startsWith('stock/')) {

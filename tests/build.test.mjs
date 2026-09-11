@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 test('deployed pages contain no embedded business records or third-party executable URLs',()=>{
   for(const page of ['index.html','calculator.html']){
-    const html=fs.readFileSync(page,'utf8');
+    const html=fs.readFileSync('dist/'+page,'utf8');
     assert.doesNotMatch(html,/INIT_3PL|INIT_ECOUNT|inventory_16\.xlsx|<script[^>]*src="https?:/);
     assert.doesNotMatch(html,/text\/babel|unsafe-eval/);
     assert.match(html,/Content-Security-Policy/);
@@ -12,6 +12,15 @@ test('deployed pages contain no embedded business records or third-party executa
       assert.equal(crypto.createHash('sha384').update(fs.readFileSync(file)).digest('base64'),hash,file);
   }
   assert.match(fs.readFileSync('vendor/xlsx.full.min.js','utf8'),/0\.20\.3/);
+});
+test('GitHub entry pages only redirect to the matching Firebase page',()=>{
+  for(const page of ['index.html','calculator.html']){
+    const html=fs.readFileSync(page,'utf8');
+    assert.doesNotMatch(html,/<script|firebaseConfig|INIT_3PL/);
+    const destination='https://warehouse-inventory-84fef.web.app/'+(page==='index.html'?'':page);
+    assert.ok(html.includes('0;url='+destination));
+    assert.match(html,/target="_top"/);
+  }
 });
 test('hosting blocks framing and serves scripts without MIME sniffing',()=>{
   const headers=Object.fromEntries(JSON.parse(fs.readFileSync('firebase.json')).hosting.headers[0].headers.map(x=>[x.key,x.value]));

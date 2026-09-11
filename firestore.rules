@@ -3,6 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function approved() {
       return request.auth != null
+        && request.auth.token.auth_time is int
+        && request.time < timestamp.value(request.auth.token.auth_time * 1000) + duration.value(8, 'h')
         && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier in [1, 2];
     }
     function tier2() {

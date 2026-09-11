@@ -22,6 +22,22 @@ beforeEach(async()=>{
   await Promise.all([db.doc('roles/one').set({tier:1}),db.doc('roles/two').set({tier:2}),db.doc('stock/p3l').set(stock)]);
 });
 after(async()=>{await env?.cleanup();if(app)await deleteApp(app);});
+test('expired approved sessions cannot read business data or audit records',async()=>{
+  const client=env.authenticatedContext('two',{auth_time:Math.floor(Date.now()/1000)-8*3600-60}).firestore();
+  for(const name of ['shelves','pallets','stock','stockPrev','boms','settings','auditLog'])
+    await assertFails(getDocs(collection(client,name)));
+  await assertFails(getDoc(doc(client,'auditVersions/test/data/before')));
+});
+test('failed requests consume quota without business changes; quota renews after one minute',async()=>{
+  const now=Date.now();
+  for(let i=0;i<30;i++)
+    await assert.rejects(commitMutations(db,auth('one'),[],now),{code:'invalid-argument'});
+  await assert.rejects(commitMutations(db,auth('one'),[mutation()],now),{code:'resource-exhausted'});
+  assert.equal((await db.doc('stock/p3l').get()).data()._revision,undefined);
+  assert.equal((await db.collection('auditLog').get()).size,0);
+  await commitMutations(db,auth('one'),[mutation()],now+60001);
+  assert.equal((await db.doc('stock/p3l').get()).data()._revision,1);
+});
 
 test('anonymous and unassigned accounts cannot read private collections',async()=>{
   for(const context of [env.unauthenticatedContext(),env.authenticatedContext('unassigned')])
@@ -30,14 +46,14 @@ test('anonymous and unassigned accounts cannot read private collections',async()
 });
 test('approved readers can read stock; all browser writes and role escalation are denied',async()=>{
   for(const uid of ['one','two']){
-    const client=env.authenticatedContext(uid).firestore();
+    const client=env.authenticatedContext(uid,{auth_time:Math.floor(Date.now()/1000)}).firestore();
     await assertSucceeds(getDoc(doc(client,'stock/p3l')));
     await assertFails(setDoc(doc(client,'stock/p3l'),stock));
     await assertFails(setDoc(doc(client,'roles/'+uid),{tier:2}));
     await assertFails(setDoc(doc(client,'auditLog/fake'),{by:uid}));
   }
   await assertFails(getDocs(collection(env.authenticatedContext('one').firestore(),'auditLog')));
-  await assertSucceeds(getDocs(collection(env.authenticatedContext('two').firestore(),'auditLog')));
+  await assertSucceeds(getDocs(collection(env.authenticatedContext('two',{auth_time:Math.floor(Date.now()/1000)}).firestore(),'auditLog')));
 });
 test('server denies missing auth, missing role, expired login and tier-one BOM edits',async()=>{
   await assert.rejects(commitMutations(db,null,[mutation()]));
