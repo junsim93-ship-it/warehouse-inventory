@@ -30,3 +30,20 @@ test('separate build loads React without changing the original hosting target',(
   assert.equal(config.functions,undefined);assert.equal(config.firestore,undefined);
   const css=fs.readFileSync('ui/styles.css','utf8');assert.match(css,/prefers-reduced-motion/);
 });
+
+test('rotated mirrored machine-room door stays hinged on the right wall',()=>{
+  const source=fs.readFileSync('ui/FloorPlan.jsx','utf8');
+  const template=source.match(/transform=\{`([^`]+scale[^`]+)`\}/)[1];
+  const s={x:1992,y:1400,w:220/3,h:220/3,rot:90,flip:true};
+  const rotation=s=>'rotate('+s.rot+' '+(s.x+s.w/2)+' '+(s.y+s.h/2)+')';
+  const transform=new Function('s','rotation','return `'+template+'`')(s,rotation);
+  let x=s.x,y=s.y+s.h;
+  for(const [,op,args] of [...transform.matchAll(/(translate|scale|rotate)\(([^)]+)\)/g)].reverse()){
+    const [a,b,c]=args.trim().split(/\s+/).map(Number);
+    if(op==='translate'){x+=a;y+=b;}
+    if(op==='scale'){x*=a;y*=b;}
+    if(op==='rotate'){const dx=x-b,dy=y-c,r=a*Math.PI/180;x=b+dx*Math.cos(r)-dy*Math.sin(r);y=c+dx*Math.sin(r)+dy*Math.cos(r);}
+  }
+  assert.ok(Math.abs(x-2065.333333333333)<0.001,'hinge must meet the right room wall');
+  assert.ok(Math.abs(y-1400)<0.001,'hinge must remain at the top of the doorway');
+});

@@ -43,7 +43,7 @@ export default function FloorPlan({ locations, selectedId, onSelect }) {
         <polyline points={points(plan.innerWall)} className="plan-wall"/>
         <polygon points={points(plan.extraRoom)} className="plan-room"/>
         {plan.fixtures.filter(s => s.role !== 'pillar').map((s, i) => <g key={i}>
-          {s.role === 'door' ? <path d={`M${s.x} ${s.y} A${Math.min(s.w,s.h)} ${Math.min(s.w,s.h)} 0 0 1 ${s.x+s.w} ${s.y+s.h} L${s.x} ${s.y+s.h} Z`} transform={`${rotation(s)} translate(${s.x+s.w/2} ${s.y+s.h/2}) scale(${s.flip?-1:1} ${s.vflip?-1:1}) translate(${-s.x-s.w/2} ${-s.y-s.h/2})`} className="plan-door"/> : <Shape shape={s} className={`plan-${s.role}`}/>}
+          {s.role === 'door' ? <path d={`M${s.x} ${s.y} A${Math.min(s.w,s.h)} ${Math.min(s.w,s.h)} 0 0 1 ${s.x+s.w} ${s.y+s.h} L${s.x} ${s.y+s.h} Z`} transform={`translate(${s.x+s.w/2} ${s.y+s.h/2}) scale(${s.flip?-1:1} ${s.vflip?-1:1}) translate(${-s.x-s.w/2} ${-s.y-s.h/2}) ${rotation(s)}`} className="plan-door"/> : <Shape shape={s} className={`plan-${s.role}`}/>}
           {s.label && <Label shape={s} text={s.label} className="plan-fixture-label"/>}
         </g>)}
         {locations.filter(isMatched).map(location => {
