@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", "Segoe UI", sans-serif;
   font-size: 16px; line-height: 1.5; font-synthesis: none; font-optical-sizing: auto;
   font-variant-numeric: tabular-nums; color: var(--text); background: var(--bg);
@@ -7,13 +8,6 @@
   --danger: #b32e39; --warning: #8d570c; --success: #237650;
   --shadow: 0 2px 8px #18243b06; --toolbar: #ffffffeb;
   --product: #deedfd; --material: #e9edf2; --machine: #f0f2ce; --sample: #f9e5ed; --zone-text: #23364c;
-}
-:root[data-theme=dark] {
-  color-scheme: dark; --bg: #16171b; --surface: #22252b; --muted-surface: #1c1f25;
-  --text: #edf0f5; --muted: #b2bac8; --border: #414752; --accent: #8db6ff;
-  --accent-soft: #243b60; --danger: #ff9aa3; --warning: #edc27c; --success: #85d4ab;
-  --shadow: none; --toolbar: #22252bed;
-  --product: #203d5c; --material: #344150; --machine: #42482e; --sample: #503447; --zone-text: #e6ecf5;
 }
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -48,7 +42,6 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .button:hover { background: var(--muted-surface); border-color: var(--muted); }
 .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .button.primary:hover { filter: brightness(.95); }
-[data-theme=dark] .button.primary { color: #12223c; }
 .button.subtle { background: transparent; border-color: transparent; }
 .button.subtle:hover { background: var(--muted-surface); }
 .button.danger { color: var(--danger); border-color: var(--danger); }
@@ -72,7 +65,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .user-label { font-size: 14px; font-weight: 600; border-left: 1px solid var(--border); padding-left: 20px; overflow-wrap: anywhere; }
 .user-label small { display: block; color: var(--muted); margin-top: 2px; font-weight: 400; }
-.theme-button { color: var(--muted); }
+
 .workspace { max-width: 1380px; margin: auto; padding: 32px 40px 20px; }
 .workspace-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .eyebrow { font-size: 14px; font-weight: 600; letter-spacing: .01em; color: var(--muted); }
@@ -134,12 +127,6 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-label { fill: var(--zone-text); font-weight: 600; letter-spacing: -.01em; pointer-events: none; }
 .floor-plan [data-location-id="S17"] { --zone: var(--map-special); --zone-text: var(--text); }
 #pillar-hatch rect { fill: var(--map-line); } #pillar-hatch path { stroke: var(--map-fixture); }
-[data-theme=dark] .map-panel {
-  --product: #fdeede; --material: #f2eee9; --machine: #d0cef2; --sample: #e5f9f1; --zone-text: #23364c;
-  --map-floor: #111820; --map-header: #19232e; --map-wall: #647587; --map-fixture: #202e3b;
-  --map-fixture-text: #c4d2e0; --map-line: #42576c; --map-selection: #f4f8ff; --map-pallet: #263545;
-  --text: #f4f8ff; --muted: #aebed0; background: #111820;
-}
 .map-footer { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px 16px; }
 .legend span { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--muted); }
@@ -279,7 +266,7 @@ summary { cursor: pointer; color: var(--accent); min-height: 44px; padding: 10px
 @media(max-width:600px) {
   .header-inner { padding: 13px 16px; align-items: flex-start; flex-wrap: wrap; gap: 11px; }
   .brand h1 { font-size: 20px; }.brand-mark { width: 42px; height: 42px; }
-  .header-actions { width: 100%; justify-content: space-between; gap: 5px; }.user-label { border: 0; padding: 0; order: -1; max-width: 180px; }.theme-button span { display: none; }
+  .header-actions { width: 100%; justify-content: space-between; gap: 5px; }.user-label { border: 0; padding: 0; order: -1; max-width: 180px; }
   .workspace { padding: 24px 14px 12px; }.workspace-intro { align-items: flex-start; margin-bottom: 20px; }
   .workspace-intro h2 { font-size: 20px; max-width: 240px; line-height: 1.45; }
   .connection-status { max-width: 100px; font-size: 14px; line-height: 1.5; white-space: normal; gap: 5px; margin-top: 4px; }

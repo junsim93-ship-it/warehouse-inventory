@@ -36,7 +36,6 @@ export default function App() {
   const [auditError, setAuditError] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
-  const [dark, setDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const sessionRef = useRef(null);
   const epoch = useRef(0);
   const leaveGuard = useRef(null);
@@ -83,7 +82,6 @@ export default function App() {
     finally { setLoading(false); }
   }, [api, updateLocations]);
   useEffect(() => { let live = true; api('/api/session').then(data => { if (live) establish(data); }).catch(error => { if (!live) return; if (error.status === 401 || error.status === 403) clearSession(); else setAuthMessage(error.message); }).finally(() => { if (live) setReady(true); }); return () => { live = false; }; }, [api, establish, clearSession]);
-  useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
   useEffect(() => { if (session?.user.id) loadLocations(); }, [session?.user.id, loadLocations]);
   useEffect(() => {
     if (!session?.user.id) return;
@@ -157,7 +155,7 @@ export default function App() {
   const tabs = [{ id: 'map', label: '구획도' }, { id: 'inventory', label: '재고 현황' }, { id: 'ledger', label: '입출고 기록' }, ...(session?.user.role === 2 ? [{ id: 'management', label: '운영 관리' }, { id: 'audit', label: '변경 이력' }] : [])];
   return <>
     <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
-    <header className="app-header"><div className="header-inner"><div className="brand"><span className="brand-mark"><Mark/></span><div><h1>지하 구획도</h1><p>지하 창고 재고 관리 도면</p></div></div><div className="header-actions"><button className="button subtle theme-button" onClick={() => setDark(!dark)} aria-label={dark ? '라이트 모드로 전환' : '다크 모드로 전환'}>{dark ? '☀' : '☾'}<span>{dark ? '라이트' : '다크'} 모드</span></button>{session && <><span className="user-label">{session.user.name || session.user.email}<small>{session.user.role}단계 관리자</small></span><button className="button subtle" onClick={logout}>로그아웃</button></>}</div></div></header>
+    <header className="app-header"><div className="header-inner"><div className="brand"><span className="brand-mark"><Mark/></span><div><h1>지하 구획도</h1><p>지하 창고 재고 관리 도면</p></div></div><div className="header-actions">{session && <><span className="user-label">{session.user.name || session.user.email}<small>{session.user.role}단계 관리자</small></span><button className="button subtle" onClick={logout}>로그아웃</button></>}</div></div></header>
     <main id="main-content" className={session ? 'workspace' : 'login-layout'}>
       {!ready ? <div className="loading-state" role="status">로그인 상태를 확인하고 있습니다…</div> : !session ? <section className="login-card" aria-labelledby="login-heading"><div className="login-symbol"><Mark/></div><span className="eyebrow">창고 관리 시스템</span><h2 id="login-heading">업무 공간에 로그인</h2><p className="login-description">구획별 위치와 재고를 한곳에서 관리하세요.<br/>인가된 관리자만 접근할 수 있습니다.</p>{authMessage && <p className="warning-banner" role="status">{authMessage}</p>}<form onSubmit={login}><label className="field">이메일<input name="email" type="email" autoComplete="username" required maxLength={254} placeholder="이메일 주소를 입력하세요"/></label><label className="field">비밀번호<input name="password" type="password" autoComplete="current-password" required maxLength={256} placeholder="비밀번호를 입력하세요"/></label>{loginError && <p className="error-banner" role="alert">{loginError}</p>}<button className="button primary login-submit" disabled={loggingIn}>{loggingIn ? '로그인 확인 중…' : '로그인' }<span aria-hidden="true">→</span></button></form><div className="login-help">계정 발급 또는 비밀번호 재설정은 창고 운영 관리자에게 문의하세요.</div><div className="login-security"><span aria-hidden="true">▣</span> 활동이 없으면 자동으로 로그아웃됩니다.</div></section> : <>
         <div className="workspace-intro"><div><span className="eyebrow">창고 운영 현황</span></div><span className={`connection-status${dataError ? ' disconnected' : ''}`} role="status"><i/>{dataError ? '연결 확인 필요' : '5초마다 변경 확인'}</span></div>
