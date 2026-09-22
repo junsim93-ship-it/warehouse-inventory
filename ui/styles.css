@@ -117,13 +117,17 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-label { fill: var(--zone-text); font-weight: 650; pointer-events: none; }
 .map-count { fill: var(--zone-text); font-size: 12px; pointer-events: none; }
 [data-theme=dark] .map-panel {
-  --product: #344f68; --material: #454f5d;
-  --machine: #48594d; --sample: #594a60; --zone-text: #eef2f6;
+  --product: #245b7a; --material: #35465c;
+  --machine: #236365; --sample: #384d80; --zone-text: #e9f3fc;
 }
+[data-theme=dark] .map-scroll { background: #131c27; }
 [data-theme=dark] .floor-plan {
-  --text: #aebac8; --muted: #8190a1;
-  --muted-surface: #2c323b; --accent: #9bc7ee;
+  --surface: #131c27; --text: #8295ac; --muted: #607d96;
+  --muted-surface: #1e2c3b; --accent: #80d9f4;
 }
+[data-theme=dark] .floor-plan #pallet-hatch rect { fill: #263545; }
+[data-theme=dark] .floor-plan #pallet-hatch path { stroke: #6d869e; }
+[data-theme=dark] .plan-fixture-label { fill: #b9cbdc; }
 .map-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 18px 24px; border-top: 1px solid var(--border); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px 16px; }
 .legend span { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--muted); }
