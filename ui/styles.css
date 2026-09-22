@@ -116,6 +116,14 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-location:active>.plan-shape { stroke: var(--text); stroke-width: 12; }
 .map-label { fill: var(--zone-text); font-weight: 650; pointer-events: none; }
 .map-count { fill: var(--zone-text); font-size: 12px; pointer-events: none; }
+[data-theme=dark] .map-panel {
+  --product: #344f68; --material: #454f5d;
+  --machine: #48594d; --sample: #594a60; --zone-text: #eef2f6;
+}
+[data-theme=dark] .floor-plan {
+  --text: #aebac8; --muted: #8190a1;
+  --muted-surface: #2c323b; --accent: #9bc7ee;
+}
 .map-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 18px 24px; border-top: 1px solid var(--border); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px 16px; }
 .legend span { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--muted); }
