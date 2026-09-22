@@ -99,7 +99,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .subtle-tag { color: var(--muted); font-size: 14px; background: var(--muted-surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; white-space: nowrap; }
 .map-note { margin: 0 24px 6px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 
-.map-panel { --map-floor: var(--surface); --map-wall: #67707c; --map-fixture: var(--muted-surface); --map-fixture-text: var(--muted); --map-line: #87919d; --map-selection: #087caf; --map-pallet: #e3e8ed; --map-hatch: #a6b0bc; --map-special: #d3a63c; --map-header: var(--surface); }
+.map-panel { --map-floor: var(--surface); --map-wall: #67707c; --map-fixture: var(--muted-surface); --map-fixture-text: var(--muted); --map-line: #87919d; --map-selection: #087caf; --map-pallet: #e3e8ed; --map-special: #d3a63c; --map-header: var(--surface); }
 .map-panel .panel-heading { min-height: 80px; padding: 16px 24px; flex-wrap: wrap; background: var(--map-header); gap: 12px; }
 .map-panel .panel-heading>div { min-width: 0; flex: 1 1 260px; }
 .map-panel .panel-heading h2 { font-size: 20px; font-weight: 700; }
@@ -107,16 +107,13 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-panel .subtle-tag { max-width: 100%; white-space: normal; }
 .map-legend { padding: 14px 24px; background: var(--map-floor); border-bottom: 1px solid var(--border); }
 .map-tools { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 24px; background: var(--map-floor); }
-.map-zoom { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.map-zoom .button { min-width: 44px; min-height: 44px; padding: 8px 12px; }
-.map-zoom output { min-width: 48px; text-align: center; font-size: 14px; font-variant-numeric: tabular-nums; }
 .map-location-picker { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; white-space: nowrap; }
 .map-location-picker select { min-height: 44px; min-width: 0; max-width: 220px; }
 .map-body { display: grid; grid-template-columns: minmax(0,1fr); position: relative; }
 .map-body.has-selection { grid-template-columns: minmax(0,1fr) 300px; }
-.map-panel .map-scroll { min-width: 0; height: min(66vh,760px); min-height: 320px; overflow: auto; padding: 24px; background: var(--map-floor); cursor: grab; touch-action: pan-x pan-y; overscroll-behavior: contain; }
+.map-panel .map-scroll { min-width: 0; height: auto; max-height: 760px; overflow: auto; padding: 24px; background: var(--map-floor); cursor: grab; touch-action: pan-x pan-y; overscroll-behavior: contain; }
 .map-scroll.is-dragging { cursor: grabbing; user-select: none; }
-.floor-plan { display: block; max-width: none; min-width: 0; height: auto; margin: 0 auto; overflow: visible; background: var(--map-floor); }
+.floor-plan { display: block; width: 100%; max-width: none; min-width: 800px; height: auto; margin: 0 auto; overflow: visible; background: var(--map-floor); }
 .zone-product { --zone: var(--product); }.zone-material { --zone: var(--material); }
 .zone-machine { --zone: var(--machine); }.zone-sample { --zone: var(--sample); }
 .plan-wall, .plan-room { stroke: var(--map-wall); stroke-width: 4; stroke-linejoin: miter; fill: none; vector-effect: non-scaling-stroke; }
@@ -129,19 +126,18 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-location { cursor: pointer; outline: none; }
 .map-hit-area { cursor: pointer; fill: transparent; stroke: none; pointer-events: all; }
 .map-location>.plan-shape { fill: var(--zone); stroke: var(--map-line); stroke-width: 1; vector-effect: non-scaling-stroke; transition: filter 150ms, stroke 150ms; }
-.map-location.pallet>.plan-shape { fill: url(#pallet-hatch); }
+.map-location.pallet>.plan-shape { fill: var(--map-pallet); }
 .map-location:hover>.plan-shape { filter: brightness(1.06); stroke: var(--map-selection); }
 .map-location.selected>.plan-shape, .map-location:focus-visible>.plan-shape { stroke: var(--map-selection); stroke-width: 3; }
 .map-location:focus-visible>.plan-shape { stroke-dasharray: 5 2; }
 .map-location:active>.plan-shape { stroke: var(--text); stroke-width: 2; }
 .map-label { fill: var(--zone-text); font-weight: 600; letter-spacing: -.01em; pointer-events: none; }
 .floor-plan [data-location-id="S17"] { --zone: var(--map-special); --zone-text: #111318; }
-#pallet-hatch rect { fill: var(--map-pallet); } #pallet-hatch path { stroke: var(--map-hatch); }
 #pillar-hatch rect { fill: var(--map-line); } #pillar-hatch path { stroke: var(--map-fixture); }
 [data-theme=dark] .map-panel {
   --product: #a44f3f; --material: #3c6d98; --machine: #2e6f73; --sample: #745784; --zone-text: #fff;
   --map-floor: #12161b; --map-header: #191d24; --map-wall: #67707c; --map-fixture: #232931;
-  --map-fixture-text: #b8c0cc; --map-line: #48515d; --map-selection: #78d7ff; --map-pallet: #1e242c; --map-hatch: #3e4652;
+  --map-fixture-text: #b8c0cc; --map-line: #48515d; --map-selection: #78d7ff; --map-pallet: #1e242c;
   --text: #f5f7fa; --muted: #a8b0bc; background: #0f1115;
 }
 .map-footer { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
@@ -151,7 +147,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .legend .legend-column { background: repeating-linear-gradient(45deg,var(--map-line) 0 3px,var(--map-fixture) 3px 4px); }
 .legend .legend-worktable { background: var(--map-fixture); }
 .legend .legend-special { background: var(--map-special); }
-.legend .legend-pallet { background: repeating-linear-gradient(45deg,var(--map-pallet) 0 6px,var(--map-hatch) 6px 8px); }
+.legend .legend-pallet { background: var(--map-pallet); }
 .map-help { font-size: 13px; color: var(--muted); }
 .map-details { min-width: 0; display: flex; flex-direction: column; gap: 16px; max-height: min(66vh,760px); background: var(--map-header); border-left: 1px solid var(--border); padding: 20px; }
 .map-details-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
