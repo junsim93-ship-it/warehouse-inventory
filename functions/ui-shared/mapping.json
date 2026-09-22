@@ -1,0 +1,184 @@
+{
+  "S01": {
+    "path": "shelves/shelf-5",
+    "aliases": []
+  },
+  "S02": {
+    "path": "shelves/shelf-4",
+    "aliases": []
+  },
+  "S03": {
+    "path": "shelves/shelf-3",
+    "aliases": []
+  },
+  "S04": {
+    "path": "shelves/shelf-19",
+    "aliases": []
+  },
+  "S05": {
+    "path": "shelves/shelf-15",
+    "aliases": []
+  },
+  "S06": {
+    "path": "shelves/shelf-14",
+    "aliases": []
+  },
+  "S07": {
+    "path": "shelves/shelf-11",
+    "aliases": []
+  },
+  "S08": {
+    "path": "shelves/shelf-13",
+    "aliases": []
+  },
+  "S09": {
+    "path": "shelves/shelf-2",
+    "aliases": []
+  },
+  "S10": {
+    "path": "shelves/shelf-1",
+    "aliases": []
+  },
+  "S11": {
+    "path": "shelves/shelf-23",
+    "aliases": []
+  },
+  "S12": {
+    "path": "shelves/shelf-22",
+    "aliases": []
+  },
+  "S13": {
+    "path": "shelves/shelf-21",
+    "aliases": []
+  },
+  "S14": {
+    "path": "shelves/shelf-10",
+    "aliases": []
+  },
+  "S15": {
+    "path": "shelves/shelf-9",
+    "aliases": []
+  },
+  "S16": {
+    "path": "shelves/shelf-8",
+    "aliases": []
+  },
+  "S17": {
+    "path": "shelves/shelf-18",
+    "aliases": []
+  },
+  "S18": {
+    "path": "shelves/shelf-20",
+    "aliases": []
+  },
+  "P01": {
+    "path": "pallets/pgroup-pallet-22",
+    "aliases": [
+      "pallets/pallet-14",
+      "pallets/pgroup-pallet-14",
+      "pallets/pallet-15",
+      "pallets/pgroup-pallet-15",
+      "pallets/pallet-16",
+      "pallets/pgroup-pallet-16",
+      "pallets/pallet-17",
+      "pallets/pgroup-pallet-17",
+      "pallets/pallet-19",
+      "pallets/pgroup-pallet-19",
+      "pallets/pallet-20",
+      "pallets/pgroup-pallet-20",
+      "pallets/pallet-21",
+      "pallets/pgroup-pallet-21",
+      "pallets/pallet-23",
+      "pallets/pgroup-pallet-23",
+      "pallets/pallet-18",
+      "pallets/pgroup-pallet-18",
+      "pallets/pallet-22"
+    ]
+  },
+  "P02": {
+    "path": "pallets/pallet-28",
+    "aliases": [
+      "pallets/pgroup-pallet-28"
+    ]
+  },
+  "P03": {
+    "path": "pallets/pgroup-pallet-5",
+    "aliases": [
+      "pallets/pallet-4",
+      "pallets/pgroup-pallet-4",
+      "pallets/pallet-5"
+    ]
+  },
+  "P04": {
+    "path": "pallets/pallet-8",
+    "aliases": [
+      "pallets/pgroup-pallet-8"
+    ]
+  },
+  "P05": {
+    "path": "pallets/pgroup-pallet-26",
+    "aliases": [
+      "pallets/pallet-24",
+      "pallets/pgroup-pallet-24",
+      "pallets/pallet-25",
+      "pallets/pgroup-pallet-25",
+      "pallets/pallet-26",
+      "pallets/pallet-27",
+      "pallets/pgroup-pallet-27"
+    ]
+  },
+  "P06": {
+    "path": "pallets/pallet-3",
+    "aliases": [
+      "pallets/pgroup-pallet-3"
+    ]
+  },
+  "P07": {
+    "path": "pallets/pallet-0",
+    "aliases": [
+      "pallets/pgroup-pallet-0"
+    ]
+  },
+  "P08": {
+    "path": "pallets/pgroup-pallet-29",
+    "aliases": [
+      "pallets/pallet-29",
+      "pallets/pallet-30",
+      "pallets/pgroup-pallet-30"
+    ]
+  },
+  "P09": {
+    "path": "pallets/pallet-13",
+    "aliases": [
+      "pallets/pgroup-pallet-13"
+    ]
+  },
+  "P10": {
+    "path": "pallets/pgroup-pallet-11",
+    "aliases": [
+      "pallets/pallet-9",
+      "pallets/pgroup-pallet-9",
+      "pallets/pallet-10",
+      "pallets/pgroup-pallet-10",
+      "pallets/pallet-12",
+      "pallets/pgroup-pallet-12",
+      "pallets/pallet-11"
+    ]
+  },
+  "P11": {
+    "path": "pallets/pgroup-pallet-1",
+    "aliases": [
+      "pallets/pallet-1",
+      "pallets/pallet-2",
+      "pallets/pgroup-pallet-2"
+    ]
+  },
+  "P12": {
+    "path": "pallets/pgroup-pallet-6",
+    "aliases": [
+      "pallets/pallet-6",
+      "pallets/pallet-7",
+      "pallets/pgroup-pallet-7"
+    ]
+  }
+}

@@ -33,6 +33,7 @@ export async function commitMutations(db,auth,mutations,now=Date.now()) {
     const backupRefs=stockIds.map(id=>db.doc('stockPrev/'+id));
     const snaps=await tx.getAll(roleRef,...refs,...backupRefs);
     const tier=snaps[0].data()?.tier;
+    if((snaps[0].data()?.sessionValidAfter||0)>auth.token.auth_time) reject('unauthenticated','계정 설정이 변경되었습니다. 다시 로그인해 주세요.');
     if(tier!==1 && tier!==2) reject('permission-denied','승인된 관리자 권한이 필요합니다.');
     const previous=snaps.slice(1,1+refs.length).map(s=>s.exists?s.data():null);
     const backups=new Map(stockIds.map((id,i)=>[id,snaps[1+refs.length+i].data()??null]));
