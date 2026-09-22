@@ -22,7 +22,6 @@ function Label({ shape, text, className = 'map-label', scale = 1 }) {
 
 export default function FloorPlan({ locations, selectedId, onSelect, onInventory }) {
   const map = useRef(null);
-  const drag = useRef(null);
   const drawing = useRef(null);
   const [scale, setScale] = useState(1200 / plan.width);
   const selected = locations.find(l => l.id === selectedId);
@@ -50,23 +49,14 @@ export default function FloorPlan({ locations, selectedId, onSelect, onInventory
     return () => cancelAnimationFrame(frame);
   }, [selectedId]);
   return <section className="map-panel" aria-labelledby="map-heading">
-    <div className="panel-heading"><div><h2 id="map-heading">창고 구획도</h2><p>위치를 선택하면 해당 위치의 재고를 확인합니다. 빈 바닥을 드래그하면 도면이 이동합니다.</p></div><span className="subtle-tag">B1 · 지하 창고</span></div>
+    <div className="panel-heading"><div><h2 id="map-heading">창고 구획도</h2><p>위치를 선택하면 해당 위치의 재고를 확인합니다.</p></div><span className="subtle-tag">B1 · 지하 창고</span></div>
     <div className="map-legend legend" aria-label="구역 범례">{Object.entries(zoneNames).map(([key,label]) => <span key={key}><i className={`zone-${key}`}/>{label}</span>)}<span><i className="legend-special"/>미품 선반</span><span><i className="legend-worktable"/>고정 설비</span><span><i className="legend-column"/>기둥</span><span><i className="legend-pallet"/>팔레트 · 선택 가능</span></div>
     <div className="map-tools" aria-label="도면 탐색">
       <label className="map-location-picker">위치 찾기<select value={selectedId || ''} onChange={e => onSelect(e.target.value || null)}><option value="">위치 선택</option>{locations.filter(isMatched).map(l => <option key={l.id} value={l.id}>{l.label} · {l.id}</option>)}</select></label>
     </div>
     {unmatched.length > 0 && <div className="warning-banner" role="alert">도면 매칭 확인 필요: {unmatched.map(l => l.label || l.id || '이름 없는 위치').join(', ')}. 아래 점선 영역에서 재고를 확인해 주세요.</div>}
     <div className={`map-body${selected ? ' has-selection' : ''}`}>
-    <div className="map-scroll" ref={map} tabIndex={0} aria-label="창고 도면. 방향키 또는 스크롤로 이동하세요." onKeyDown={e => { if (e.key === 'Escape' && selected) closeDetails(); }} onPointerDown={e => {
-      if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('[data-location-id], [data-hit-id]')) return;
-      drag.current = { x: e.clientX, y: e.clientY, left: e.currentTarget.scrollLeft, top: e.currentTarget.scrollTop };
-      e.currentTarget.setPointerCapture(e.pointerId);
-      e.currentTarget.classList.add('is-dragging');
-    }} onPointerMove={e => {
-      if (!drag.current) return;
-      e.currentTarget.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
-      e.currentTarget.scrollTop = drag.current.top - (e.clientY - drag.current.y);
-    }} onLostPointerCapture={e => { drag.current = null; e.currentTarget.classList.remove('is-dragging'); }} onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }}>
+    <div className="map-scroll" ref={map} onKeyDown={e => { if (e.key === 'Escape' && selected) closeDetails(); }}>
 
       <svg ref={drawing} className="floor-plan" viewBox={`0 0 ${plan.width} ${plan.height}`} aria-label="지하 창고 위치 선택" role="group">
         <defs><pattern id="pillar-hatch" width={8 / scale} height={8 / scale} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width={8 / scale} height={8 / scale}/><path d={`M0 0V${8 / scale}`} strokeWidth={1 / scale}/></pattern></defs>

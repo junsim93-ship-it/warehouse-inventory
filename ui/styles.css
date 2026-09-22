@@ -104,9 +104,8 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-location-picker select { min-height: 44px; min-width: 0; max-width: 220px; }
 .map-body { display: grid; grid-template-columns: minmax(0,1fr); position: relative; }
 .map-body.has-selection { grid-template-columns: minmax(0,1fr) 300px; }
-.map-panel .map-scroll { min-width: 0; height: auto; max-height: 760px; overflow: auto; padding: 24px; background: var(--map-floor); cursor: grab; touch-action: pan-x pan-y; overscroll-behavior: contain; }
-.map-scroll.is-dragging { cursor: grabbing; user-select: none; }
-.floor-plan { display: block; width: 100%; max-width: none; min-width: 800px; height: auto; margin: 0 auto; overflow: visible; background: var(--map-floor); }
+.map-panel .map-scroll { min-width: 0; padding: 24px; background: var(--map-floor); }
+.floor-plan { display: block; width: 100%; max-width: none; min-width: 0; height: auto; margin: 0 auto; overflow: visible; background: var(--map-floor); }
 .zone-product { --zone: var(--product); }.zone-material { --zone: var(--material); }
 .zone-machine { --zone: var(--machine); }.zone-sample { --zone: var(--sample); }
 .plan-wall, .plan-room { stroke: var(--map-wall); stroke-width: 4; stroke-linejoin: miter; fill: none; vector-effect: non-scaling-stroke; }
@@ -150,8 +149,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
   .map-body.has-selection { grid-template-columns: minmax(0,1fr); }
   .map-details { position: fixed; bottom: 12px; left: 12px; right: 12px; z-index: 20; max-height: 38dvh; border-left: 0; border-top: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 32px #0004; padding: 16px 24px; gap: 10px; }
   .map-body.has-selection { padding-bottom: 38dvh; }
-  .map-body.has-selection .map-scroll { height: 45vh; min-height: 280px; }
-  .map-location-picker { width: 100%; }
+.map-location-picker { width: 100%; }
   .map-location-picker select { flex: 1; max-width: none; }
 }
 .unmatched-locations { display: flex; flex-wrap: wrap; padding: 16px 24px; gap: 12px; }
