@@ -74,7 +74,7 @@ export default function FloorPlan({ locations, selectedId, onSelect, onInventory
           return <g key={location.id} role="button" tabIndex={0} aria-pressed={selectedId === location.id} data-location-id={location.id} className={`map-location zone-${location.zone} ${location.kind} ${selectedId === location.id ? 'selected' : ''}`} aria-label={`${location.label}, ${location.kind === 'pallet' ? '팔레트' : '선반'}, ${zoneNames[location.zone] || '미분류'}, 제품 ${items.length}개${shortage ? ', 재고 부족' : ''}. 재고 보기`} onClick={() => onSelect(location.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(location.id); } }}>
 
             {(location.parts || [location]).map((shape, i) => <Shape key={i} shape={shape}/>)}
-            {location.kind !== 'pallet' && <Label scale={scale} shape={location} text={location.label}/>}
+            {location.kind !== 'pallet' && location.mapLabel !== '' && <Label scale={scale} shape={location} text={location.mapLabel ?? location.label}/>}
             <title>{`${location.label} · ${zoneNames[location.zone]} · ${items.length}개 제품${shortage ? ' · 재고 부족' : ''}`}</title>
           </g>;
         })}

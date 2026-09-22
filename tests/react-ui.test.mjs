@@ -77,3 +77,15 @@ test('floor plan preserves accessible locations and renders only selected invent
   assert.match(html,/>제품선반1<\/tspan>/);
   assert.doesNotMatch(html,/map-zoom|pallet-hatch|도면 확대|도면 축소/);
 });
+
+test('shelf renaming keeps stored inventory attached to the same stable locations',async()=>{
+  const docs=Object.fromEntries(['S14','S15','S16','S17'].map((id,i)=>[mapping[id].path,{cols:1,cells:[{list:[{name:id,qty:i+1}]}]}]));
+  const {locations}=await model(docs);
+  for(const [id,label,qty] of [['S14','미품 선반',1],['S15','샘플 선반1',2],['S16','샘플 선반2',3],['S17','미지정 선반',4]]){
+    const location=locations.find(l=>l.id===id);
+    assert.equal(location.label,label);
+    assert.equal(location.cells['1-1'][0].name,id);
+    assert.equal(location.cells['1-1'][0].qty,qty);
+  }
+  assert.equal(locations.find(l=>l.id==='S17').mapLabel,'');
+});

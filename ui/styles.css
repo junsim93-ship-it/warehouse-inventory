@@ -124,7 +124,7 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .map-location:focus-visible>.plan-shape { stroke-dasharray: 5 2; }
 .map-location:active>.plan-shape { stroke: var(--text); stroke-width: 2; }
 .map-label { fill: var(--zone-text); font-weight: 600; letter-spacing: -.01em; pointer-events: none; }
-.floor-plan [data-location-id="S17"] { --zone: var(--map-special); --zone-text: var(--text); }
+.floor-plan [data-location-id="S14"], .floor-plan [data-location-id="S17"] { --zone: var(--map-special); --zone-text: var(--text); }
 #pillar-hatch rect { fill: var(--map-line); } #pillar-hatch path { stroke: var(--map-fixture); }
 .map-footer { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px 16px; }
