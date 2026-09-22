@@ -99,7 +99,12 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .subtle-tag { color: var(--muted); font-size: 14px; background: var(--muted-surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; white-space: nowrap; }
 .map-note { margin: 0 24px 6px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 
-.map-panel { --map-floor: var(--surface); --map-wall: #67707c; --map-fixture: var(--muted-surface); --map-fixture-text: var(--muted); --map-line: #87919d; --map-selection: #087caf; --map-pallet: #e3e8ed; --map-special: transparent; --map-header: var(--surface); }
+.map-panel {
+  --product: #ff967c; --material: #72b5ff; --machine: #57d9bf; --sample: #bd9aff; --zone-text: #101925;
+  --map-floor: #f5f8fc; --map-wall: #78899b; --map-fixture: #e5edf5; --map-fixture-text: #405469;
+  --map-line: #63778e; --map-selection: #243d5c; --map-pallet: #dce6f0; --map-special: transparent; --map-header: #fff;
+  --text: #182838; --muted: #526579; --border: #d0dce8; background: var(--map-floor);
+}
 .map-panel .panel-heading { min-height: 80px; padding: 16px 24px; flex-wrap: wrap; background: var(--map-header); gap: 12px; }
 .map-panel .panel-heading>div { min-width: 0; flex: 1 1 260px; }
 .map-panel .panel-heading h2 { font-size: 20px; font-weight: 700; }
@@ -135,10 +140,9 @@ input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); f
 .floor-plan [data-location-id="S17"] { --zone: var(--map-special); --zone-text: var(--text); }
 #pillar-hatch rect { fill: var(--map-line); } #pillar-hatch path { stroke: var(--map-fixture); }
 [data-theme=dark] .map-panel {
-  --product: #ff967c; --material: #72b5ff; --machine: #57d9bf; --sample: #bd9aff; --zone-text: #101925;
   --map-floor: #111820; --map-header: #19232e; --map-wall: #647587; --map-fixture: #202e3b;
   --map-fixture-text: #c4d2e0; --map-line: #42576c; --map-selection: #f4f8ff; --map-pallet: #263545;
-  --text: #f4f8ff; --muted: #aebed0; background: #111820;
+  --text: #f4f8ff; --muted: #aebed0; --border: #34475b;
 }
 .map-footer { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--border); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px 16px; }
