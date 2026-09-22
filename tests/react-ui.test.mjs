@@ -68,12 +68,12 @@ test('floor plan preserves accessible locations and renders only selected invent
   assert.equal((html.match(/data-location-id=/g)||[]).length,30);
   assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
   assert.match(html,/<aside[^>]+aria-labelledby="map-details-title"/);
-  assert.doesNotMatch(html,/aria-modal|<tspan/);
+  assert.doesNotMatch(html,/aria-modal/);
   const panel=html.split('<aside')[1];
   assert.match(panel,/Selected item/);assert.doesNotMatch(panel,/Other location item/);
   assert.match(empty.split('<aside')[1],/Other location item/);
   assert.match(html,/팔레트 · 선택 가능/);assert.match(html,/기둥 · 고정 구조물/);
-  assert.match(html,/>부자재 선반1<\/text>/);
-  assert.match(html,/>제품선반1<\/text>/);
+  assert.match(html,/>부<\/tspan><tspan[^>]*>자<\/tspan>/);
+  assert.match(html,/>제품선반1<\/tspan>/);
   assert.doesNotMatch(html,/map-zoom|pallet-hatch|도면 확대|도면 축소/);
 });

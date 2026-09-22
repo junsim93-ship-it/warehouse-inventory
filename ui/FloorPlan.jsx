@@ -13,10 +13,11 @@ function Label({ shape, text, className = 'map-label', scale = 1 }) {
   const w = quarterTurn ? shape.h : shape.w, h = quarterTurn ? shape.w : shape.h;
   const vertical = h > w * 1.4;
   const x = shape.x + shape.w / 2 + (shape.labelDx || 0), y = shape.y + shape.h / 2 + (shape.labelDy || 0);
-  const label = text;
-  const size = Math.min((className === 'map-label' ? 14 : 13) / scale, (vertical ? h : w) / (label.length * .65), (vertical ? w : h) * .65);
-  const angle = vertical ? -90 : shape.rot && shape.rot % 90 ? shape.rot : 0;
-  return <text x={x} y={y} className={className} textAnchor="middle" dominantBaseline="central" style={{ fontSize: size }} transform={`rotate(${angle} ${x} ${y})`}>{label}</text>;
+  const lines = vertical ? [...text.replaceAll(' ', '')] : [text];
+  const size = Math.min((className === 'map-label' ? 14 : 13) / scale, vertical ? w * .65 : w / (text.length * .75), h / (lines.length * 1.15));
+  return <text className={className} textAnchor="middle" dominantBaseline="central" style={{ fontSize: size }}>
+    {lines.map((line, index) => <tspan key={index} x={x} y={y + (index - (lines.length - 1) / 2) * size * 1.15}>{line}</tspan>)}
+  </text>;
 }
 
 export default function FloorPlan({ locations, selectedId, onSelect, onInventory }) {
