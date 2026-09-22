@@ -89,3 +89,13 @@ test('shelf renaming keeps stored inventory attached to the same stable location
   }
   assert.equal(locations.find(l=>l.id==='S17').mapLabel,'');
 });
+
+test('lower shelves meet their wall boundary and the pillar clears both adjacent shelves',async()=>{
+  const {plan}=await import('../functions/ui-shared/plan.mjs');
+  const get=id=>plan.locations.find(l=>l.id===id);
+  const pillar=plan.fixtures.find(f=>f.role==='pillar'&&f.y===1196);
+  assert.ok(pillar.x>get('S07').x+get('S07').w);
+  assert.ok(pillar.x+pillar.w<get('S14').x);
+  for(const id of ['S14','S15','S16'])assert.equal(get(id).y+get(id).h,1586);
+  assert.equal(get('S08').y+get('S08').h,1744);
+});

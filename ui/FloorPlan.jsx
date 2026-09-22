@@ -60,13 +60,7 @@ export default function FloorPlan({ locations, selectedId, onSelect, onInventory
 
       <svg ref={drawing} className="floor-plan" viewBox={`0 0 ${plan.width} ${plan.height}`} aria-label="지하 창고 위치 선택" role="group">
         <defs><pattern id="pillar-hatch" width={8 / scale} height={8 / scale} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width={8 / scale} height={8 / scale}/><path d={`M0 0V${8 / scale}`} strokeWidth={1 / scale}/></pattern></defs>
-        <polygon points={points(plan.walls)} className="plan-wall"/>
-        <polyline points={points(plan.innerWall)} className="plan-wall plan-inner-wall"/>
         <polygon points={points(plan.extraRoom)} className="plan-room"/>
-        {plan.fixtures.filter(s => s.role !== 'pillar').map((s, i) => <g key={i}>
-          {s.role === 'door' ? <path d={`M${s.x} ${s.y} A${Math.min(s.w,s.h)} ${Math.min(s.w,s.h)} 0 0 1 ${s.x+s.w} ${s.y+s.h} L${s.x} ${s.y+s.h} Z`} transform={`translate(${s.x+s.w/2} ${s.y+s.h/2}) scale(${s.flip?-1:1} ${s.vflip?-1:1}) translate(${-s.x-s.w/2} ${-s.y-s.h/2}) ${rotation(s)}`} className="plan-door"/> : <Shape shape={s} className={`plan-${s.role}`}/>}
-          {s.label && <Label scale={scale} shape={s} text={s.label} className="plan-fixture-label"/>}
-        </g>)}
         <g aria-hidden="true" className="map-hit-targets">{locations.filter(l => isMatched(l) && l.kind !== 'pallet' && !l.poly).map(location => <rect key={location.id} data-hit-id={location.id} className="map-hit-area" x={location.x + location.w / 2 - Math.max(location.w, 44 / scale) / 2} y={location.y + location.h / 2 - Math.max(location.h, 44 / scale) / 2} width={Math.max(location.w, 44 / scale)} height={Math.max(location.h, 44 / scale)} transform={rotation(location)} onClick={() => onSelect(location.id)}/>)}</g>
         {locations.filter(isMatched).map(location => {
           const items = itemsAt(location);
@@ -78,6 +72,11 @@ export default function FloorPlan({ locations, selectedId, onSelect, onInventory
             <title>{`${location.label} · ${zoneNames[location.zone]} · ${items.length}개 제품${shortage ? ' · 재고 부족' : ''}`}</title>
           </g>;
         })}
+        <g aria-hidden="true" pointerEvents="none"><polygon points={points(plan.walls)} className="plan-wall"/><polyline points={points(plan.innerWall)} className="plan-wall plan-inner-wall"/></g>
+        {plan.fixtures.filter(s => s.role !== 'pillar').map((s, i) => <g key={i}>
+          {s.role === 'door' ? <path d={`M${s.x} ${s.y} A${Math.min(s.w,s.h)} ${Math.min(s.w,s.h)} 0 0 1 ${s.x+s.w} ${s.y+s.h} L${s.x} ${s.y+s.h} Z`} transform={`translate(${s.x+s.w/2} ${s.y+s.h/2}) scale(${s.flip?-1:1} ${s.vflip?-1:1}) translate(${-s.x-s.w/2} ${-s.y-s.h/2}) ${rotation(s)}`} className="plan-door"/> : <Shape shape={s} className={`plan-${s.role}`}/>}
+          {s.label && <Label scale={scale} shape={s} text={s.label} className="plan-fixture-label"/>}
+        </g>)}
         {plan.fixtures.filter(s => s.role === 'pillar').map((s, i) => <g key={i} aria-label="기둥">
           <Shape shape={s} className="plan-pillar"/>
           <title>기둥 · 고정 구조물</title>
