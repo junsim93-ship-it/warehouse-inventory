@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { itemsAt, aggregate, groupKey } from './domain.mjs';
 import { plan } from './plan.mjs';
 
@@ -8,20 +8,37 @@ const rotation = s => `rotate(${s.rot || 0} ${s.x + s.w / 2} ${s.y + s.h / 2})`;
 function Shape({ shape, className = 'plan-shape' }) {
   return shape.poly ? <polygon points={points(shape.poly)} className={className}/> : <rect x={shape.x} y={shape.y} width={shape.w} height={shape.h} rx="2" transform={rotation(shape)} className={className}/>;
 }
-function Label({ shape, text, className = 'map-label' }) {
+function Label({ shape, text, className = 'map-label', scale = 1 }) {
   const quarterTurn = Math.abs(Math.sin((shape.rot || 0) * Math.PI / 180)) > .99;
   const w = quarterTurn ? shape.h : shape.w, h = quarterTurn ? shape.w : shape.h;
   const vertical = h > w * 1.4;
   const x = shape.x + shape.w / 2 + (shape.labelDx || 0), y = shape.y + shape.h / 2 + (shape.labelDy || 0);
-  const letters = vertical ? [...text.replaceAll(' ', '')] : [text];
-  const size = Math.min(36, vertical ? w * .5 : w / (text.length * .75), h / (letters.length * 1.15));
-  const angle = shape.rot && shape.rot % 90 ? shape.rot : 0;
-  return <text className={className} textAnchor="middle" dominantBaseline="central" style={{ fontSize: size }} transform={`rotate(${angle} ${x} ${y})`}>
-    {letters.map((line, i) => <tspan key={i} x={x} y={y + (i - (letters.length - 1) / 2) * size * 1.15}>{line}</tspan>)}
-  </text>;
+  const label = className === 'map-label' ? (vertical ? shape.id : text.replace('선반', ' ').replace(/\s+/g, ' ').trim()) : text;
+  const size = Math.min((className === 'map-label' ? 14 : 13) / scale, (vertical ? h : w) / (label.length * .65), (vertical ? w : h) * .65);
+  const angle = vertical ? -90 : shape.rot && shape.rot % 90 ? shape.rot : 0;
+  return <text x={x} y={y} className={className} textAnchor="middle" dominantBaseline="central" style={{ fontSize: size }} transform={`rotate(${angle} ${x} ${y})`}>{label}</text>;
 }
-export default function FloorPlan({ locations, selectedId, onSelect }) {
+
+export default function FloorPlan({ locations, selectedId, onSelect, onInventory }) {
   const map = useRef(null);
+  const drag = useRef(null);
+  const [zoom, setZoom] = useState(1);
+  const selected = locations.find(l => l.id === selectedId);
+  const scale = 1200 * zoom / plan.width;
+  const fitZoom = () => Math.max(.2, Math.min(1, (map.current.clientWidth - 48) / 1200, (map.current.clientHeight - 48) / (1200 * plan.height / plan.width)));
+  useEffect(() => { setZoom(Math.max(.65, fitZoom())); }, []);
+  const changeZoom = next => {
+    const el = map.current;
+    const ratio = next / zoom;
+    const left = (el.scrollLeft + el.clientWidth / 2) * ratio - el.clientWidth / 2;
+    const top = (el.scrollTop + el.clientHeight / 2) * ratio - el.clientHeight / 2;
+    setZoom(next);
+    requestAnimationFrame(() => el.scrollTo({ left, top }));
+  };
+  const closeDetails = () => {
+    map.current?.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+    onSelect(null);
+  };
   const counts = new Map();
   locations.forEach(l => counts.set(l.id, (counts.get(l.id) || 0) + 1));
   const isMatched = l => Boolean(l.id && l.label && counts.get(l.id) === 1 && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(l[k])) && l.w > 0 && l.h > 0 && l.x >= 0 && l.y >= 0 && l.x + l.w <= plan.width && l.y + l.h <= plan.height);
@@ -30,39 +47,67 @@ export default function FloorPlan({ locations, selectedId, onSelect }) {
   useEffect(() => {
     if (!selectedId) return;
     const node = [...(map.current?.querySelectorAll('[data-location-id]') || [])].find(el => el.dataset.locationId === selectedId);
-    node?.focus();
-    node?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    const frame = requestAnimationFrame(() => {
+      node?.focus({ preventScroll: true });
+      node?.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [selectedId]);
   return <section className="map-panel" aria-labelledby="map-heading">
-    <div className="panel-heading"><div><h2 id="map-heading">창고 구획도</h2><p>위치를 선택하면 해당 위치의 재고를 확인할 수 있습니다.</p></div><span className="subtle-tag">B1 · 지하 창고</span></div>
+    <div className="panel-heading"><div><h2 id="map-heading">창고 구획도</h2><p>위치를 선택하면 해당 위치의 재고를 확인합니다. 빈 바닥을 드래그하면 도면이 이동합니다.</p></div><span className="subtle-tag">B1 · 지하 창고</span></div>
+    <div className="map-legend legend" aria-label="구역 범례">{Object.entries(zoneNames).map(([key,label]) => <span key={key}><i className={`zone-${key}`}/>{label}</span>)}<span><i className="legend-special"/>미품 선반</span><span><i className="legend-worktable"/>고정 설비</span><span><i className="legend-column"/>기둥</span><span><i className="legend-pallet"/>팔레트 · 선택 가능</span></div>
+    <div className="map-tools" aria-label="도면 탐색">
+      <div className="map-zoom"><button className="button" aria-label="도면 축소" disabled={zoom <= .2} onClick={() => changeZoom(Math.max(.2, zoom - .25))}>−</button><output aria-live="polite">{Math.round(zoom * 100)}%</output><button className="button" aria-label="도면 확대" disabled={zoom >= 3} onClick={() => changeZoom(Math.min(3, zoom + .25))}>+</button><button className="button" onClick={() => changeZoom(fitZoom())}>전체 보기</button><button className="button" onClick={() => changeZoom(1)}>100%</button></div>
+      <label className="map-location-picker">위치 찾기<select value={selectedId || ''} onChange={e => onSelect(e.target.value || null)}><option value="">위치 선택</option>{locations.filter(isMatched).map(l => <option key={l.id} value={l.id}>{l.label} · {l.id}</option>)}</select></label>
+    </div>
     {unmatched.length > 0 && <div className="warning-banner" role="alert">도면 매칭 확인 필요: {unmatched.map(l => l.label || l.id || '이름 없는 위치').join(', ')}. 아래 점선 영역에서 재고를 확인해 주세요.</div>}
-    <div className="map-scroll" ref={map} tabIndex={0} aria-label="창고 도면. 작은 화면에서는 가로로 스크롤할 수 있습니다.">
-      <svg className="floor-plan" viewBox={`0 0 ${plan.width} ${plan.height}`} aria-label="지하 창고 위치 선택" role="group">
-        <defs><pattern id="pallet-hatch" width="13" height="13" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="13" height="13" fill="var(--material)"/><path d="M0 0V13" stroke="var(--muted)" strokeWidth="1.4" opacity=".4"/></pattern></defs>
+    <div className={`map-body${selected ? ' has-selection' : ''}`}>
+    <div className="map-scroll" ref={map} tabIndex={0} aria-label="창고 도면. 방향키 또는 스크롤로 이동하고 확대 버튼으로 크기를 조절하세요." onKeyDown={e => { if (e.key === 'Escape' && selected) closeDetails(); }} onPointerDown={e => {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('[data-location-id], [data-hit-id]')) return;
+      drag.current = { x: e.clientX, y: e.clientY, left: e.currentTarget.scrollLeft, top: e.currentTarget.scrollTop };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      e.currentTarget.classList.add('is-dragging');
+    }} onPointerMove={e => {
+      if (!drag.current) return;
+      e.currentTarget.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
+      e.currentTarget.scrollTop = drag.current.top - (e.clientY - drag.current.y);
+    }} onLostPointerCapture={e => { drag.current = null; e.currentTarget.classList.remove('is-dragging'); }} onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }}>
+
+      <svg style={{ width: 1200 * zoom }} className="floor-plan" viewBox={`0 0 ${plan.width} ${plan.height}`} aria-label="지하 창고 위치 선택" role="group">
+        <defs>{['pallet', 'pillar'].map(kind => <pattern key={kind} id={`${kind}-hatch`} width={8 / scale} height={8 / scale} patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width={8 / scale} height={8 / scale}/><path d={`M0 0V${8 / scale}`} strokeWidth={1 / scale}/></pattern>)}</defs>
         <polygon points={points(plan.walls)} className="plan-wall"/>
-        <polyline points={points(plan.innerWall)} className="plan-wall"/>
+        <polyline points={points(plan.innerWall)} className="plan-wall plan-inner-wall"/>
         <polygon points={points(plan.extraRoom)} className="plan-room"/>
         {plan.fixtures.filter(s => s.role !== 'pillar').map((s, i) => <g key={i}>
           {s.role === 'door' ? <path d={`M${s.x} ${s.y} A${Math.min(s.w,s.h)} ${Math.min(s.w,s.h)} 0 0 1 ${s.x+s.w} ${s.y+s.h} L${s.x} ${s.y+s.h} Z`} transform={`translate(${s.x+s.w/2} ${s.y+s.h/2}) scale(${s.flip?-1:1} ${s.vflip?-1:1}) translate(${-s.x-s.w/2} ${-s.y-s.h/2}) ${rotation(s)}`} className="plan-door"/> : <Shape shape={s} className={`plan-${s.role}`}/>}
-          {s.label && <Label shape={s} text={s.label} className="plan-fixture-label"/>}
+          {s.label && <Label scale={scale} shape={s} text={s.label} className="plan-fixture-label"/>}
         </g>)}
+        <g aria-hidden="true" className="map-hit-targets">{locations.filter(l => isMatched(l) && l.kind !== 'pallet' && !l.poly).map(location => <rect key={location.id} data-hit-id={location.id} className="map-hit-area" x={location.x + location.w / 2 - Math.max(location.w, 44 / scale) / 2} y={location.y + location.h / 2 - Math.max(location.h, 44 / scale) / 2} width={Math.max(location.w, 44 / scale)} height={Math.max(location.h, 44 / scale)} transform={rotation(location)} onClick={() => onSelect(location.id)}/>)}</g>
         {locations.filter(isMatched).map(location => {
           const items = itemsAt(location);
           const shortage = items.some(i => low.has(groupKey(i)));
-          return <g key={location.id} role="button" tabIndex={0} data-location-id={location.id} className={`map-location zone-${location.zone} ${location.kind} ${selectedId === location.id ? 'selected' : ''}`} aria-label={`${location.label}, ${location.kind === 'pallet' ? '팔레트' : '선반'}, ${zoneNames[location.zone] || '미분류'}, 제품 ${items.length}개${shortage ? ', 재고 부족' : ''}. 재고 보기`} onClick={() => onSelect(location.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(location.id); } }}>
+          return <g key={location.id} role="button" tabIndex={0} aria-pressed={selectedId === location.id} data-location-id={location.id} className={`map-location zone-${location.zone} ${location.kind} ${selectedId === location.id ? 'selected' : ''}`} aria-label={`${location.label}, ${location.kind === 'pallet' ? '팔레트' : '선반'}, ${zoneNames[location.zone] || '미분류'}, 제품 ${items.length}개${shortage ? ', 재고 부족' : ''}. 재고 보기`} onClick={() => onSelect(location.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(location.id); } }}>
+
             {(location.parts || [location]).map((shape, i) => <Shape key={i} shape={shape}/>)}
-            {location.kind !== 'pallet' && <Label shape={location} text={location.label}/>}
+            {location.kind !== 'pallet' && <Label scale={scale} shape={location} text={location.label}/>}
             <title>{`${location.label} · ${zoneNames[location.zone]} · ${items.length}개 제품${shortage ? ' · 재고 부족' : ''}`}</title>
           </g>;
         })}
         {plan.fixtures.filter(s => s.role === 'pillar').map((s, i) => <g key={i} aria-label="기둥">
           <Shape shape={s} className="plan-pillar"/>
-          <path d={`M${s.x} ${s.y}l${s.w} ${s.h}M${s.x+s.w} ${s.y}l${-s.w} ${s.h}`} className="plan-wall"/>
+          <title>기둥 · 고정 구조물</title>
         </g>)}
       </svg>
     </div>
+    {selected && <aside className="map-details" aria-labelledby="map-details-title" onKeyDown={e => { if (e.key === 'Escape') closeDetails(); }}>
+      <div className="map-details-heading"><div><span className="eyebrow">{zoneNames[selected.zone]} · {selected.id}</span><h3 id="map-details-title">{selected.label}</h3></div><button className="button subtle" aria-label="위치 상세 닫기" onClick={closeDetails}>×</button></div>
+      <p className="map-details-summary">등록 제품 {itemsAt(selected).length}건{selected.kind === 'shelf' ? ` · ${selected.rows}단 ${selected.cols}칸` : ' · 팔레트'}</p>
+      <div className="map-detail-items">{itemsAt(selected).length ? Object.entries(selected.cells || {}).flatMap(([cell, items]) => items.map((item, index) => <div className="map-detail-item" key={`${cell}-${index}`}><div><strong>{item.name || item.code || '이름 없는 제품'}</strong><span>{item.qty}개</span></div><small>{selected.kind === 'shelf' ? cell.replace('-', '단 ') + '칸 · ' : ''}{item.code}{item.lot ? ` · 로트 ${item.lot}` : ''}</small>{item.expiry && <small>유통기한 {item.expiry}</small>}</div>)) : <p>등록된 제품이 없습니다.</p>}</div>
+      <button className="button primary map-inventory-link" onClick={() => onInventory(selected.id)}>재고 상세·등록·수정 →</button>
+    </aside>}
+    </div>
     {unmatched.length > 0 && <div className="unmatched-locations">{unmatched.map((l,i) => <button key={`${l.id}-${i}`} className="unmatched-location" disabled={!l.id || counts.get(l.id) > 1} onClick={() => onSelect(l.id)}>{l.label || l.id || '미확인 위치'} · 도면 확인 필요</button>)}</div>}
-    <div className="map-footer"><div className="legend" aria-label="구역 범례">{Object.entries(zoneNames).map(([key,label]) => <span key={key}><i className={`zone-${key}`}/>{label}</span>)}<span><i className="legend-column"/>기둥</span><span><i className="legend-worktable"/>작업대</span><span><i className="legend-wall"/>벽</span><span><i className="legend-door"/>문</span></div><span className="map-help">Tab으로 이동 · Enter로 재고 보기</span></div>
+    <div className="map-footer"><span className="map-help">Tab으로 위치 이동 · Enter로 선택 · Esc로 상세 닫기</span><span className="map-help">좁은 선반은 위치 ID로 표시합니다.</span></div>
     {!locations.length && <div className="empty-state"><h3>등록된 위치가 없습니다</h3><p>서버 초기 설정에서 창고 위치를 등록해 주세요.</p></div>}
   </section>;
 }

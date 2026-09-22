@@ -47,3 +47,31 @@ test('rotated mirrored machine-room door stays hinged on the right wall',()=>{
   assert.ok(Math.abs(x-2065.333333333333)<0.001,'hinge must meet the right room wall');
   assert.ok(Math.abs(y-1400)<0.001,'hinge must remain at the top of the doorway');
 });
+
+test('floor plan preserves accessible locations and renders only selected inventory in a nonmodal panel',async()=>{
+  const {build}=await import('esbuild');
+  const {createRequire}=await import('node:module');
+  const result=await build({stdin:{contents:`
+    import React from 'react';
+    import {renderToStaticMarkup} from 'react-dom/server';
+    import FloorPlan from './ui/FloorPlan.jsx';
+    import {sampleLocations} from './ui/domain.mjs';
+    const locations=sampleLocations();
+    locations[0].cells['1-1']=[{code:'TEST',name:'Selected item',qty:12,lot:'L1',expiry:''}];
+    locations[1].cells['1-1']=[{code:'OTHER',name:'Other location item',qty:9,lot:'',expiry:''}];
+    export const html=renderToStaticMarkup(<FloorPlan locations={locations} selectedId="S01" onSelect={()=>{}} onInventory={()=>{}}/>);
+    export const empty=renderToStaticMarkup(<FloorPlan locations={locations} selectedId="S02" onSelect={()=>{}} onInventory={()=>{}}/>);
+  `,resolveDir:process.cwd(),loader:'jsx'},bundle:true,platform:'node',format:'cjs',write:false});
+  const module={exports:{}};
+  new Function('require','module','exports',result.outputFiles[0].text)(createRequire(import.meta.url),module,module.exports);
+  const {html,empty}=module.exports;
+  assert.equal((html.match(/data-location-id=/g)||[]).length,30);
+  assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1);
+  assert.match(html,/<aside[^>]+aria-labelledby="map-details-title"/);
+  assert.doesNotMatch(html,/aria-modal|<tspan/);
+  const panel=html.split('<aside')[1];
+  assert.match(panel,/Selected item/);assert.doesNotMatch(panel,/Other location item/);
+  assert.match(empty.split('<aside')[1],/Other location item/);
+  assert.match(html,/팔레트 · 선택 가능/);assert.match(html,/기둥 · 고정 구조물/);
+  assert.match(html,/>S05<\/text>/);
+});
