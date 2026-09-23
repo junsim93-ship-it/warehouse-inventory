@@ -7,3 +7,6 @@ dist/
 *.pem
 *.key
 firebase.demo.json
+
+dist-next/
+dist-emulator/

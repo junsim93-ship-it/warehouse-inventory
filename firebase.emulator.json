@@ -1,0 +1,6 @@
+{
+  "firestore":{"rules":"firestore.rules"},
+  "functions":[{"source":"functions","codebase":"inventory","runtime":"nodejs22"}],
+  "hosting":{"public":"dist-emulator"},
+  "emulators":{"firestore":{"port":8087},"auth":{"port":9099},"functions":{"port":5001},"hosting":{"port":3003},"ui":{"enabled":false},"singleProjectMode":true}
+}

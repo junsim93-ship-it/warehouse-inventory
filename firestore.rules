@@ -5,7 +5,8 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.auth_time is int
         && request.time < timestamp.value(request.auth.token.auth_time * 1000) + duration.value(8, 'h')
-        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier in [1, 2];
+        && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier in [1, 2]
+        && request.auth.token.auth_time >= get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.get('sessionValidAfter', 0);
     }
     function tier2() {
       return approved() && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.tier == 2;
@@ -15,7 +16,7 @@ service cloud.firestore {
       allow list, write: if false;
     }
     match /{collection}/{id} {
-      allow read: if collection in ['shelves', 'pallets', 'stock', 'stockPrev', 'settings', 'boms'] && approved();
+      allow read: if collection in ['shelves', 'pallets', 'stock', 'stockPrev', 'settings', 'boms', 'uiProducts'] && approved();
       // The callable validates and audits writes using the Admin SDK and IAM.
       allow write: if false;
     }
