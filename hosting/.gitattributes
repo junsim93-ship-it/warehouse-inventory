@@ -1,0 +1,2 @@
+# Keep the deployed bytes intact for Subresource Integrity.
+unified/** -text
