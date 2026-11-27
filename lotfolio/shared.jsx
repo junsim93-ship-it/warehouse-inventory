@@ -373,6 +373,7 @@ export function Filters({
   setReg,
   month,
   setMonth,
+  children,
   placeholder = '제품명 또는 코드 검색',
 }) {
   return (
@@ -410,6 +411,7 @@ export function Filters({
           onChange={(e) => setMonth(e.target.value)}
         />
       )}
+      {children}
     </div>
   );
 }

@@ -25,6 +25,19 @@
   function view(lotCode) {
     send({type:'lotfolio:view-design', lotCode});
   }
+  function subscribeFreezes(uid, onChange) {
+    function receive(event) {
+      if (event.origin !== location.origin || event.source !== window.parent) return;
+      const message = event.data;
+      if (message?.type === 'lotfolio:freeze-state' && message.uid === uid &&
+          (message.freezes === null || (typeof message.freezes === 'object' && !Array.isArray(message.freezes)))) {
+        onChange(message.freezes);
+      }
+    }
+    window.addEventListener('message', receive);
+    send({type:'lotfolio:request-freezes'});
+    return () => window.removeEventListener('message', receive);
+  }
   if (embedded) {
     document.documentElement.setAttribute('data-workspace-frame','');
     window.addEventListener('message', event => {
@@ -49,5 +62,5 @@
     });
     window.addEventListener('pagehide',cancel);
   }
-  window.LotfolioFrame = {embedded, parse, view, generate, cancel};
+  window.LotfolioFrame = {embedded, parse, view, generate, cancel, subscribeFreezes};
 })();

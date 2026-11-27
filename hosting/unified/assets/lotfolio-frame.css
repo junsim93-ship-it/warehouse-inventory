@@ -41,6 +41,50 @@
 }
 .lotfolio-design-button {margin-inline-start: 5px;}
 .lotfolio-lot-field {display: flex; align-items: center; gap: 5px;}
+.lotfolio-freeze-plan,
+.lotfolio-freeze-warning,
+.lotfolio-freeze-lot summary {
+  background: #fff1e5;
+  color: #773d23;
+  border: 1px solid #efc7ab;
+  border-radius: 6px;
+  font: 650 12px/1.5 Pretendard, 'Malgun Gothic', sans-serif;
+}
+.lotfolio-freeze-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.lotfolio-freeze-plan label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.lotfolio-freeze-warning {
+  margin-top: 5px;
+  padding: 4px 7px;
+  overflow-wrap: anywhere;
+}
+.lotfolio-freeze-lot {
+  display: inline-block;
+  margin-inline-start: 5px;
+}
+.lotfolio-freeze-lot summary {
+  display: inline-block;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.lotfolio-freeze-lot span {
+  display: block;
+  font: 12px/1.5 Pretendard, 'Malgun Gothic', sans-serif;
+  color: #773d23;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .lotfolio-design-button:hover, .lotfolio-generate-button:hover {background: #e5e7ff;}
 .lotfolio-design-button:focus-visible, .lotfolio-generate-button:focus-visible {
   outline: 2px solid var(--accent);

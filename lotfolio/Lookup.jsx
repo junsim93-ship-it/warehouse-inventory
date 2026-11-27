@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, Plus } from 'lucide-react';
 import { Modal, useApp, nameOf } from './shared.jsx';
 import { DesignPreview } from './Designs.jsx';
+import { DesignFreezeControls } from './DesignFreeze.jsx';
 import { formatQuantity, lookupInventory, stockBySource } from './inventory-lookup.mjs';
 import { parseLot } from './lot-engine.mjs';
 import { app } from './firebase-app.js';
@@ -54,6 +55,7 @@ export function Lookup({ parsed }) {
   return (
     <Modal title="로트 통합 조회" close={close} wide>
       <div className="modal-body unified-lookup">
+        {design && <DesignFreezeControls key={design.id} design={design} />}
         <div className="lookup-heading">
           <h3>{nameOf(state.products, parsed.code)}</h3>
           <code>{parsed.lot}</code>

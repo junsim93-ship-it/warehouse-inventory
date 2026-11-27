@@ -5,6 +5,7 @@ import {createMockUserToken} from '@firebase/util';
 import {createLotfolioStore} from '../../lotfolio/firebase-store.js';
 import {fileMime,newId} from '../../lotfolio/attachments.mjs';
 import {openFile} from '../../lotfolio/file-crypto.mjs';
+import {buildFreezeChange} from '../../lotfolio/design-freeze.mjs';
 
 const projectId='demo-lotfolio',bucket=projectId+'.firebasestorage.app',storageOrigin='http://127.0.0.1:9297';
 const prefix='RULE'+Date.now(), code=prefix+'005', key='2601V_'+code+'_B_NMC';
@@ -21,7 +22,7 @@ const now=Math.floor(Date.now()/1000);
 const uid = id=>prefix+'-'+id;
 function member(name,authTime=now) {
   const id=uid(name);
-  const db=env.authenticatedContext(id,{auth_time:authTime}).firestore();
+  const db=env.authenticatedContext(id,{auth_time:authTime,email:'member@example.test'}).firestore();
   const token=createMockUserToken({sub:id,user_id:id,auth_time:authTime,email:'member@example.test'},projectId);
   return {db,app:{options:{projectId,storageBucket:bucket},firestore:()=>db,
     auth:()=>({currentUser:{uid:id,email:'member@example.test',getIdToken:async()=>token}})},token};
@@ -89,6 +90,78 @@ test('Firestore enforces canonical key, product identity and immutable history',
   await assertFails(db.doc('lotDesigns/'+key).set({...design,reg:'CMN'}));
   await assertFails(db.doc('lotRecords/'+prefix+'bad').set({...lot,seq:'00'}));
   await assertFails(db.doc('lotRecords/'+lot.lot).update({memo:'replaced'}));
+});
+test('only a current tier 2 session can append freeze transitions; normal tier 1 edits preserve history',async()=>{
+  const freezeCode=prefix+'FREEZE', freezeKey='2601V_'+freezeCode+'_B_NMC';
+  const path='lotDesigns/'+freezeKey;
+  const original={...design,code:freezeCode,designKey:freezeKey};
+  const one=member('one'),two=member('two');
+  const tierOne=one.db.doc(path),tierTwo=two.db.doc(path);
+  const input={reason:'quality',memo:'검사 대기',until:'2027-01-01'};
+  const set=buildFreezeChange({},'freeze',input,two.app.auth().currentUser.email);
+  await assertFails(tierOne.set({...original,...set}));
+  await assertFails(tierOne.set({...original,freeze:null,freezeHistory:set.freezeHistory}));
+  await assertSucceeds(tierOne.set({...original,freeze:null,freezeHistory:[]}));
+  await assertFails(tierOne.update({...set,revision:newId()}));
+  await assertFails(tierOne.update({freezeHistory:set.freezeHistory}));
+  await assertFails(member('two',now-8*3600).db.doc(path).update({...set,revision:newId()}));
+  const forged=buildFreezeChange({},'freeze',input,'a-different-admin@example.test');
+  await assertFails(tierTwo.update({...forged,revision:newId()}));
+  await assertFails(tierTwo.update({freeze:set.freeze,revision:newId()}));
+  const oldDesign={id:freezeKey,...(await tierTwo.get()).data()};
+  const store=createLotfolioStore(two.app);
+  try {
+    await assertSucceeds(store.setDesignFreeze(oldDesign,'freeze',input));
+    const active={id:freezeKey,...(await tierTwo.get()).data()};
+    assert.deepEqual(active.freeze,{...set.freeze,at:active.freeze.at});
+    assert.equal((await tierOne.get()).data().freeze.reason,'quality');
+    await assertFails(tierOne.update({freeze:null}));
+    await assertFails(tierOne.update({freezeHistory:[]}));
+    await assertFails(tierOne.set({...original,revision:newId()}));
+    await assertFails(tierOne.delete());
+    await assertFails(tierTwo.delete());
+    const editor=createLotfolioStore(one.app);
+    try {
+      await assertSucceeds(editor.saveDesign({...active,original:active,memo:'원본 정보 수정'}));
+    } finally {editor.dispose();}
+    const edited={id:freezeKey,...(await tierTwo.get()).data()};
+    assert.deepEqual(edited.freeze,active.freeze);
+    assert.deepEqual(edited.freezeHistory,active.freezeHistory);
+    await assert.rejects(store.setDesignFreeze(active,'unfreeze',{}),/다른 사용자/);
+    await assertSucceeds(store.setDesignFreeze(edited,'unfreeze',{memo:'검사 완료'}));
+    const released={id:freezeKey,...(await tierTwo.get()).data()};
+    assert.equal(released.freeze,null);
+    assert.equal(released.freezeHistory[0].action,'unfreeze');
+    assert.equal(released.freezeHistory[0].memo,'검사 완료');
+    assert.deepEqual(released.freezeHistory[1],active.freezeHistory[0]);
+    await assertFails(tierOne.delete());
+    const movedCode=freezeCode+'-MOVED';
+    const movedKey='2601V_'+movedCode+'_B_NMC';
+    await assertFails(two.db.doc('lotDesigns/'+movedKey).set({...released,code:movedCode,
+      designKey:movedKey,freezeHistoryFrom:freezeKey}));
+    const moved=await store.saveDesign({...released,original:released,code:movedCode});
+    assert.equal(moved.id,movedKey);
+    assert.deepEqual((await two.db.doc('lotDesigns/'+movedKey).get()).data().freezeHistory,released.freezeHistory);
+    assert.equal((await tierTwo.get()).exists,false);
+  } finally {store.dispose();}
+});
+test('the freeze history rule only drops the oldest entry at the twenty-event limit',async()=>{
+  const cappedCode=prefix+'CAP', cappedKey='2601V_'+cappedCode+'_B_NMC';
+  const path='lotDesigns/'+cappedKey;
+  const {db,app}=member('two');
+  const actor=app.auth().currentUser.email;
+  const input={reason:'reserved',memo:'예약'};
+  let current={...design,code:cappedCode,designKey:cappedKey};
+  for (let i=0; i<20; i++) {
+    const action=i % 2 === 0 ? 'freeze' : 'unfreeze';
+    current={...current,...buildFreezeChange(current,action,input,actor,Date.now()-20000+i*1000)};
+  }
+  await admin(owner=>owner.doc(path).set(current));
+  const next=buildFreezeChange(current,'freeze',input,actor);
+  await assertFails(db.doc(path).update({...next,freezeHistory:[next.freezeHistory[0],...current.freezeHistory],revision:newId()}));
+  await assertFails(db.doc(path).update({...next,freezeHistory:next.freezeHistory.slice(0,19),revision:newId()}));
+  await assertSucceeds(db.doc(path).update({...next,revision:newId()}));
+  assert.deepEqual((await db.doc(path).get()).data().freezeHistory,next.freezeHistory);
 });
 test('Storage authorizes reads, creates and removals through Firestore roles and session age',async()=>{
   const path='lotDesigns/'+key+'/'+newId()+'.pdf', approved=member('one').token;

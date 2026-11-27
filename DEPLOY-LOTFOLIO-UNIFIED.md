@@ -46,10 +46,17 @@ gcloud storage buckets update gs://warehouse-inventory-84fef.firebasestorage.app
 
 ## 4. Firestore와 Storage 규칙 추가
 
-1. 게시 중인 Firestore 규칙 사본에서 `match /databases/{database}/documents` 블록을 찾는다. 닫는 중괄호 바로 앞에 `rules/firestore-lotfolio.rules.snippet`의 내용을 넣는다. 파일 최하단의 서비스 닫는 괄호 뒤에 붙이면 컴파일되지 않는다. 이 조각은 기존 `approved()`를 호출하고 현재 역할 문서의 `sessionValidAfter`를 검사한다. 운영 `approved()`에 승인된 1·2단계 및 `auth_time` 기준 8시간 만료가 적용되는지 확인한다.
-2. 검토 중인 운영 Firestore 원본을 작업 폴더 밖에 보관했다면 `node scripts/lotfolio-emulators.mjs test "/path/to/current-production.rules"`로 **해당 원본 + 스니펫**을 로컬에서 확인할 수 있다. 테스트용 병합 결과는 `.firebase/lotfolio/combined.rules`에만 작성된다. 기존 규칙의 더 넓은 와일드카드가 신규 컬렉션을 공개하는지도 함께 확인한다.
-3. Storage가 신규 전용 버킷이면 `storage.rules`를 사용한다. 기존 규칙이 있는 버킷은 `match /b/{bucket}/o` 안에 신규 `lot...` 함수들과 `match /lotDesigns/{designKey}/{file}`만 병합한다. 다른 경로의 규칙과 기존 전체 경로 허용 규칙의 영향을 검토한다. Firestore 역할 문서를 처음 참조할 때 콘솔에 표시되는 Storage Rules → Firestore 연결 권한을 승인한다. [교차 서비스 권한 설정](https://firebase.google.com/docs/storage/security/rules-conditions#enhance_with_cloud_firestore)
-4. 콘솔에서 두 병합본의 차이를 검토하고 규칙을 각각 게시한다. Firestore의 신규 대상은 `lotProducts`, `lotDesigns`, `lotRecords`, Storage 대상은 `lotDesigns/{designKey}/{fileId}.{ext}`다. 통합 Hosting 설정 파일에는 규칙이나 Functions 배포 항목이 없다.
+1. 현재 게시 중인 Firestore 전체 규칙을 사본으로 저장한다. `node scripts/lotfolio-emulators.mjs test "/path/to/current-production.rules"`를 실행하면 `.firebase/lotfolio/combined.rules`에 병합본이 생성되고 에뮬레이터 검증이 실행된다. 기존 Lotfolio 블록이 있으면 교체하고, 신규 설치에서는 `match /databases/{database}/documents` 안에 추가한다. 스크립트가 기존 블록을 식별하지 못하면 콘솔에서 `lotApproved()`부터 기존 `lotRecords` 매치까지를 새 스니펫으로 교체한 뒤 다시 검증한다.
+2. 운영 원본과 병합본을 비교하고 Lotfolio 블록의 변경만 확인한다. `approved()`는 승인된 1·2단계와 `auth_time` 기준 8시간 만료를 검사하고, `tier2()`는 그 조건에 2단계 역할을 더해야 한다. 스니펫은 추가로 `sessionValidAfter`를 확인한다. 규칙이 여러 개 매칭되면 허용 조건 하나만 참이어도 쓰기가 가능하므로, 이전 `lotDesigns` 매치나 해당 경로를 허용하는 와일드카드를 함께 확인한다. [Firestore 규칙 매칭 방식](https://firebase.google.com/docs/firestore/security/rules-structure#overlapping_match_statements)
+3. 동결 업데이트는 검증한 Firestore 병합본을 먼저 게시한 뒤 Hosting을 배포한다. 이 업데이트의 권한 변경 대상은 Firestore의 `lotDesigns`다. 통합 Hosting 설정은 Hosting만 배포한다. 기존 디자인의 동결 필드가 비어 있으면 정상 상태로 읽으므로 데이터 이관은 필요 없다.
+4. 신규 설치에서 전용 Storage 버킷을 구성할 때는 `storage.rules`를 사용한다. 기존 버킷에서는 `match /b/{bucket}/o` 아래의 기존 규칙을 보존하면서 Lotfolio 함수와 `match /lotDesigns/{designKey}/{file}`만 병합한다. [교차 서비스 권한 설정](https://firebase.google.com/docs/storage/security/rules-conditions#enhance_with_cloud_firestore)
+
+### 디자인 동결 확인
+
+- 2단계 계정으로 디자인을 동결하고 해제한다. 1단계 계정으로 상태와 이력은 읽을 수 있고 일반 정보는 수정할 수 있으며, 두 동결 필드를 변경하는 쓰기는 거부됨을 확인한다. 이력은 최신순 20건이다. 해제 예정일은 안내용이고 실제 해제는 관리자가 수행한다.
+- 같은 키의 차수별 로트와 차수 생략 로트가 조회에서 모두 동결로 표시되는지 확인한다. 시뮬레이션에서 동결 로트는 기본 제외되고, 예외 토글을 켰을 때만 배분 대상에 들어간다. 수동 제외는 두 모드에서 계속 적용된다. 재고 조회의 보유 수량은 실물 보유 기준으로 표시된다.
+- 동결 중인 디자인은 해제 후 삭제하거나 키를 변경할 수 있다. 해제된 디자인의 동결 이력이 있으면 2단계 관리자만 삭제하거나 키를 변경할 수 있다. 키를 옮기는 트랜잭션은 기존 이력과 이전 키(`freezeHistoryFrom`)를 새 디자인에 보존한다.
+- 라이브에서 되돌릴 때 활성 동결이 있다면 동결을 인식하는 Hosting 버전 또는 계산을 중지한 상태에서 복구한다. 동결 필드를 모르는 버전은 해당 재고를 자동 제외할 수 없다.
 
 ## 5. 미리보기, 배포, 복구
 

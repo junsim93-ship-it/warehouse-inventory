@@ -1,6 +1,9 @@
 var LotfolioSheets=(()=>{var d=Object.defineProperty;var s=Object.getOwnPropertyDescriptor;var w=Object.getOwnPropertyNames;var a=Object.prototype.hasOwnProperty;var c=(e,o)=>{for(var n in o)d(e,n,{get:o[n],enumerable:!0})},S=(e,o,n,r)=>{if(o&&typeof o=="object"||typeof o=="function")for(let i of w(o))!a.call(e,i)&&i!==n&&d(e,i,{get:()=>o[i],enumerable:!(r=s(o,i))||r.enumerable});return e};var l=e=>S(d({},"__esModule",{value:!0}),e);var u={};c(u,{loadSpreadsheet:()=>m});var t;function m(){return window.XLSX?Promise.resolve(window.XLSX):(t||(t=new Promise((e,o)=>{let n=document.createElement("script");n.src="/vendor/xlsx.full.min.js",n.integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT",n.crossOrigin="anonymous";function r(){n.remove(),o(new Error("\uC5D1\uC140 \uB3C4\uAD6C\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."))}n.onerror=r,n.onload=()=>window.XLSX?e(window.XLSX):r(),document.head.append(n)}).catch(e=>{throw t=void 0,e})),t)}return l(u);})();
 
 ;
+var CalculatorPlan=(()=>{var I=Object.defineProperty;var W=Object.getOwnPropertyDescriptor;var X=Object.getOwnPropertyNames;var Y=Object.prototype.hasOwnProperty;var G=(r,n)=>{for(var i in n)I(r,i,{get:n[i],enumerable:!0})},J=(r,n,i,c)=>{if(n&&typeof n=="object"||typeof n=="function")for(let p of X(n))!Y.call(r,p)&&p!==i&&I(r,p,{get:()=>n[p],enumerable:!(c=W(n,p))||c.enumerable});return r};var ee=r=>J(I({},"__esModule",{value:!0}),r);var ae={};G(ae,{allocateLots:()=>ne,availableQuantity:()=>T,fefoSort:()=>L,freezeDescription:()=>$,freezeForLot:()=>_,freezeMap:()=>V,freezeReason:()=>N,frozenLotsById:()=>ie,planExclusions:()=>se,simulatePlan:()=>re});var te={A:"\uC778\uC1C4\uC6A9\uAE30",B:"\uB2E8\uC0C1\uC790",C:"\uB77C\uBCA8"};function oe(r){let n=String(r??"").trim().toUpperCase();if(!/^[A-Z0-9-]+$/.test(n))throw new Error("\uC81C\uD488\uBC88\uD638\uB294 \uC601\uBB38, \uC22B\uC790, \uD558\uC774\uD508\uC73C\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");return n}function P(r){let n=String(r??"").trim().toUpperCase().split("_");if(n.length!==4)throw new Error("\uBC11\uC904(_)\uB85C \uD655\uC815\uC6D4\xB7\uCC28\uC218, \uC81C\uD488\uBC88\uD638, \uBD80\uC790\uC7AC, \uC778\uD5C8\uAC00\uC758 \uB124 \uAD6C\uAC04\uC744 \uAD6C\uBD84\uD574 \uC8FC\uC138\uC694.");let[i,c,p,m]=n,h=/^(\d{2}(?:0[1-9]|1[0-2]))V(\d*)$/.exec(i);if(!h)throw new Error("\uCCAB \uAD6C\uAC04\uC740 \uD655\uC815 \uC5F0\uC6D4 \uB124 \uC790\uB9AC(\uC6D4 01~12), V, \uC120\uD0DD \uCC28\uC218 \uC21C\uC11C\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");let l=h[2].replace(/^0+/,"").padStart(h[2]?2:0,"0");if(l==="00")throw new Error("\uBC1C\uC8FC \uCC28\uC218\uB294 1 \uC774\uC0C1\uC758 \uC815\uC218\uB85C \uC785\uB825\uD558\uAC70\uB098 \uC0DD\uB7B5\uD574 \uC8FC\uC138\uC694.");let w=oe(c);if(!Object.hasOwn(te,p))throw new Error("\uBD80\uC790\uC7AC \uAD6C\uBD84\uC740 A, B, C \uC911 \uD558\uB098\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");if(m!=="KR"&&(!/^[NMC]+$/.test(m)||new Set(m).size!==m.length))throw new Error("\uC778\uD5C8\uAC00\uC5D0\uB294 N, M, C\uB97C \uD55C \uBC88\uC529 \uC0AC\uC6A9\uD558\uAC70\uB098 \uAD6D\uB0B4 \uC804\uC6A9 KR\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694.");let q=m==="KR"?m:[..."NMC"].filter(z=>m.includes(z)).join(""),C=h[1],R="_"+w+"_"+p+"_"+q;return{month:C,seq:l,code:w,type:p,reg:q,key:C+"V"+R,lot:C+"V"+l+R,corrected:m!==q}}var D=Object.freeze({discontinued:"\uAD6C\uB514\uC790\uC778 \xB7 \uC0AC\uC6A9\uC911\uB2E8",quality:"\uD488\uC9C8\uBCF4\uB958",reserved:"\uBB3C\uB7C9\uC608\uC57D",other:"\uAE30\uD0C0"});function N(r){return Object.hasOwn(D,r)?D[r]:D.other}function V(r){return Object.fromEntries(r.filter(n=>n.freeze?.active===!0).map(n=>[n.key,n.freeze]))}function _(r,n){if(!r||typeof n!="string"||!n.includes("_"))return null;try{let{key:i}=P(n);return Object.hasOwn(r,i)&&r[i]?.active===!0?r[i]:null}catch{return null}}function $(r){return[N(r.reason),r.memo,r.by,new Date(r.at).toLocaleString("ko-KR"),r.until&&"\uD574\uC81C \uC608\uC815 "+r.until].filter(Boolean).join(" \xB7 ")}var L=r=>[...r].sort((n,i)=>n.e&&i.e?n.e.localeCompare(i.e)||n.l.localeCompare(i.l):n.e?-1:i.e?1:n.l.localeCompare(i.l));function ne(r,n,i){let c=i||new Set,p=L(r.filter(l=>!c.has(l.id))),m=n,h=new Map;for(let l of p){let w=Math.min(l.q,Math.max(0,m));h.set(l.id,w),m-=w}return L(r).map(l=>{let w=c.has(l.id),q=h.get(l.id)??0;return{...l,use:w?null:q,left:w?null:l.q-q,excluded:w}})}function re({order:r,boms:n,getStock:i,excluded:c,manualAlloc:p,partMode:m,kernelByCode:h}){let l=r.map(e=>({...e,bom:n.find(t=>t.id===e.bomId)})).filter(e=>e.bom&&e.qty>0);if(!l.length)return null;let w={},q={},C=e=>{if(!w[e]){let t=L(i(e).lots);w[e]=t,q[e]={},t.forEach(a=>{q[e][a.id]=c.has(a.id)?0:a.q})}},R=5,z=l.map(e=>{let t=[],a=(o,g,y,x)=>{let f=t.find(u=>u.code===o&&!u.isKernel);if(f){f.required+=y,x&&!f.expandedFrom&&(f.expandedFrom=x);return}t.push({code:o,name:g,required:y,isKernel:!1,expandedFrom:x||null})},d=e.bom.components.map(o=>({code:o.code,name:o.name,required:o.qty*e.qty,depth:0,expandedFrom:null}));for(;d.length;){let o=d.shift(),g=h[o.code];if(!g||o.depth>=R){a(o.code,o.name,o.required,o.expandedFrom);continue}let y=m[e.id]?.[o.code]||"auto";if(y==="force_finished"){t.push({code:o.code,name:o.name,required:o.required,isKernel:!0,kernelMode:y,kernelFullRequired:o.required,kernelExpanded:!1,expandedFrom:o.expandedFrom});continue}let x=0,f;if(y==="force_expand")f=o.required;else{C(o.code);let u=o.required;for(let K of w[o.code]){if(u<=0)break;let O=q[o.code][K.id]??0;if(O<=0)continue;let F=Math.min(O,u);q[o.code][K.id]=O-F,x+=F,u-=F}f=u}(x>0||f>0)&&t.push({code:o.code,name:o.name,required:x,isKernel:!0,kernelMode:y,kernelFullRequired:o.required,kernelExpanded:f>0,expandedFrom:o.expandedFrom}),f>0&&g.components.forEach(u=>{d.push({code:u.code,name:u.name,required:u.qty*f,depth:o.depth+1,expandedFrom:{code:o.code,name:o.name}})})}return t}),j={};z.forEach(e=>e.forEach(t=>{j[t.code]||(j[t.code]={code:t.code,name:t.name,required:0}),j[t.code].required+=t.required}));let v=Object.values(j).map(e=>{let t=i(e.code),a=t.used-e.required;return{...e,t3:t.t3,te:t.te,stock:t.used,lots:t.lots,remain:a,short:a<0?-a:0}}).sort((e,t)=>(t.short>0?1:-1)-(e.short>0?1:-1)||e.code.localeCompare(t.code)),H=l.map(e=>{let t=1/0,a=1/0,d="";return e.bom.components.forEach(o=>{let g=i(o.code).used,x=(j[o.code]?.required??o.qty*e.qty)-o.qty*e.qty,f=Math.floor(g/o.qty),u=Math.floor(Math.max(0,g-x)/o.qty);f<t&&(t=f,d=o.name),u<a&&(a=u)}),{...e,solo:t,after:a,bottleneck:d,ok:a>=e.qty}}),U={},M={};Object.keys(j).forEach(e=>{let t=L(i(e).lots);U[e]=t,M[e]={},t.forEach(a=>{M[e][a.id]=c.has(a.id)?0:a.q})});let k={},A=l.map((e,t)=>{let a=z[t].map(d=>{let o=d.required,g=U[d.code]??[],y=p[e.id]?.[d.code]??{},x=o,f={},u=new Set(Object.keys(y));for(let s of g){if(c.has(s.id)||!u.has(s.id))continue;let E=Math.max(0,y[s.id]||0),b=Math.max(0,M[d.code][s.id]??0),B=Math.min(E,b);f[s.id]=B,E>b&&(k[s.id]=(k[s.id]??0)+(E-b)),M[d.code][s.id]=b-B,x-=B}for(let s of g){if(c.has(s.id)||u.has(s.id))continue;if(x<=0)break;let E=M[d.code][s.id]??0;if(E<=0)continue;let b=Math.min(E,x);f[s.id]=b,M[d.code][s.id]=E-b,x-=b}let K=g.map(s=>({...s,use:c.has(s.id)?null:f[s.id]??0,left:c.has(s.id)?null:M[d.code][s.id]??0,excluded:c.has(s.id),manual:u.has(s.id),manualWant:u.has(s.id)?Math.max(0,y[s.id]||0):null,conflictQty:u.has(s.id)&&k[s.id]?k[s.id]:0})),O=Object.values(f).reduce((s,E)=>s+E,0),F=T(g,c);return{code:d.code,name:d.name,perUnit:e.qty?o/e.qty:0,required:o,used:O,allocations:K,lots:g,shortage:Math.max(0,x),totalStock:F,isKernel:!!d.isKernel,kernelMode:d.kernelMode||null,kernelFullRequired:d.kernelFullRequired??null,kernelExpanded:!!d.kernelExpanded,expandedFrom:d.expandedFrom||null}});return{...e,components:a,hasShortage:a.some(d=>d.shortage>0)}}),S={};A.forEach(e=>e.components.forEach(t=>{S[t.code]||(S[t.code]={}),t.allocations.forEach(a=>{!a.excluded&&a.use>0&&(S[t.code][a.id]=(S[t.code][a.id]??0)+a.use)})})),v.forEach(e=>{e.aggAllocations=e.lots.map(t=>({...t,use:c.has(t.id)?null:S[e.code]?.[t.id]??0,left:c.has(t.id)?null:t.q-(S[e.code]?.[t.id]??0),excluded:c.has(t.id)}))});let Q=Object.keys(k).length,Z=Object.values(k).reduce((e,t)=>e+t,0);return{rows:v,perProduct:H,totalShort:v.filter(e=>e.short>0),lineDetails:A,totalConflicts:Q,totalConflictQty:Z}}function ie(r,n){let i=new Map;if(!n||Object.keys(n).length===0)return i;let c=new Map;for(let p of Object.values(r))for(let m of Object.values(p))for(let h of m.lots){c.has(h.l)||c.set(h.l,_(n,h.l));let l=c.get(h.l);l&&i.set(h.id,l)}return i}function se(r,n,i=!1){return i||!n.size?r:new Set([...r,...n.keys()])}function T(r,n){return r.reduce((i,c)=>i+(n.has(c.id)?0:c.q),0)}return ee(ae);})();
+
+;
 (() => {
   (function(root) {
     if (root.parent !== root && root.parent.UnifiedSession) {
@@ -80,6 +83,19 @@ var LotfolioEngine=(()=>{var g=Object.defineProperty;var h=Object.getOwnProperty
   function view(lotCode) {
     send({type:'lotfolio:view-design', lotCode});
   }
+  function subscribeFreezes(uid, onChange) {
+    function receive(event) {
+      if (event.origin !== location.origin || event.source !== window.parent) return;
+      const message = event.data;
+      if (message?.type === 'lotfolio:freeze-state' && message.uid === uid &&
+          (message.freezes === null || (typeof message.freezes === 'object' && !Array.isArray(message.freezes)))) {
+        onChange(message.freezes);
+      }
+    }
+    window.addEventListener('message', receive);
+    send({type:'lotfolio:request-freezes'});
+    return () => window.removeEventListener('message', receive);
+  }
   if (embedded) {
     document.documentElement.setAttribute('data-workspace-frame','');
     window.addEventListener('message', event => {
@@ -104,7 +120,7 @@ var LotfolioEngine=(()=>{var g=Object.defineProperty;var h=Object.getOwnProperty
     });
     window.addEventListener('pagehide',cancel);
   }
-  window.LotfolioFrame = {embedded, parse, view, generate, cancel};
+  window.LotfolioFrame = {embedded, parse, view, generate, cancel, subscribeFreezes};
 })();
 
 ;
@@ -987,33 +1003,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     });
     return { bom: best, score: bestScore };
   }
-  var fefoSort = (lots) => [...lots].sort((a, b) => {
-    if (a.e && b.e) return a.e.localeCompare(b.e) || a.l.localeCompare(b.l);
-    if (a.e) return -1;
-    if (b.e) return 1;
-    return a.l.localeCompare(b.l);
-  });
-  function allocateLots(lots, required, excluded) {
-    const exSet = excluded || /* @__PURE__ */ new Set();
-    const usable = fefoSort(lots.filter((l) => !exSet.has(l.id)));
-    let remain = required;
-    const usedMap = /* @__PURE__ */ new Map();
-    for (const lot of usable) {
-      const u = Math.min(lot.q, Math.max(0, remain));
-      usedMap.set(lot.id, u);
-      remain -= u;
-    }
-    return fefoSort(lots).map((lot) => {
-      const isExcluded = exSet.has(lot.id);
-      const u = usedMap.get(lot.id) ?? 0;
-      return {
-        ...lot,
-        use: isExcluded ? null : u,
-        left: isExcluded ? null : lot.q - u,
-        excluded: isExcluded
-      };
-    });
-  }
+  const { fefoSort, allocateLots, simulatePlan } = CalculatorPlan;
   function ItemSearch({ items, onPick }) {
     const [q, setQ] = useState("");
     const [open, setOpen] = useState(false);
@@ -1442,7 +1432,27 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       onClick: (event) => { event.stopPropagation(); bridge.view(parsed.lot); }
     }, "시안");
   }
-  function LotTable({ lots, required, allocations, showSource, excluded, onToggle, onSelectAll, onAllocChange, onResetAlloc, searchHighlight }) {
+  function FreezeLotBadge({ freeze }) {
+    if (!freeze) return null;
+    const description = CalculatorPlan.freezeDescription(freeze);
+    return React.createElement("details", {className: "lotfolio-freeze-lot", onClick: (event) => event.stopPropagation()},
+      React.createElement("summary", {title: description}, "🔒 동결 · ", CalculatorPlan.freezeReason(freeze.reason)),
+      React.createElement("span", null, description)
+    );
+  }
+  function PlanFreezeStatus({ ready, includeFrozen, count, onToggle }) {
+    return React.createElement("section", {className: "lotfolio-freeze-plan", "aria-label": "동결 로트 계산 설정"},
+      React.createElement("span", {role: "status"}, !ready
+        ? "디자인 동결 상태를 확인할 수 있을 때 발주 계산 결과가 표시됩니다."
+        : includeFrozen ? "동결 로트 자동 제외 해제" : `동결 로트 ${count}건 제외 중`),
+      React.createElement("label", null,
+        React.createElement("input", {type: "checkbox", checked: includeFrozen, disabled: !ready,
+          onChange: (event) => onToggle(event.target.checked)}),
+        "동결 로트 포함해서 계산"
+      )
+    );
+  }
+  function LotTable({ lots, required, allocations, showSource, excluded, frozenById, forceExcludeFrozen, onToggle, onSelectAll, onAllocChange, onResetAlloc, searchHighlight }) {
     let alloc;
     if (allocations) {
       alloc = allocations;
@@ -1453,14 +1463,15 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     }
     const interactive = !!onToggle;
     const editable = !!onAllocChange;
-    const allOn = interactive && lots.every((l) => !excluded?.has(l.id));
-    const allOff = interactive && lots.every((l) => excluded?.has(l.id));
+    const selectable = interactive ? lots.filter((lot) => !forceExcludeFrozen || !frozenById?.has(lot.id)) : [];
+    const allOn = selectable.every((l) => !excluded?.has(l.id));
+    const allOff = selectable.every((l) => excluded?.has(l.id));
     const hasUseCol = alloc.some((a) => a.use != null);
     const hasManual = alloc.some((a) => a.manual);
-    return /* @__PURE__ */ React.createElement("div", null, (interactive || editable && hasManual) && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6, fontSize: 11.5, flexWrap: "wrap" } }, interactive && lots.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", null, (interactive || editable && hasManual) && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6, fontSize: 11.5, flexWrap: "wrap" } }, interactive && selectable.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
       "button",
       {
-        onClick: () => onSelectAll(true),
+        onClick: () => onSelectAll(true, selectable.map((lot) => lot.id)),
         disabled: allOn,
         style: {
           border: "1px solid #E0E4EB",
@@ -1478,7 +1489,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
-        onClick: () => onSelectAll(false),
+        onClick: () => onSelectAll(false, selectable.map((lot) => lot.id)),
         disabled: allOff,
         style: {
           border: "1px solid #E0E4EB",
@@ -1526,6 +1537,8 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         {
           type: "checkbox",
           checked: !dim,
+          disabled: forceExcludeFrozen && frozenById?.has(l.id),
+          "aria-label": l.l + " 사용",
           onChange: () => onToggle(l.id),
           style: { cursor: "pointer", width: 14, height: 14, accentColor: "#4D56CB" }
         }
@@ -1537,7 +1550,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         background: l.src === "p3l" ? "#E4EEF6" : l.src === "carton" ? "#F5EDE4" : "#EDEEFF",
         color: l.src === "p3l" ? "#1D5C8A" : l.src === "carton" ? "#7B4D1E" : "#4D56CB",
         opacity: dim ? 0.5 : 1
-      } }, l.src === "p3l" ? "3PL" : l.src === "carton" ? "\uCE74\uD1A4\uBC15\uC2A4" : "\uC774\uCE74\uC6B4\uD2B8")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", fontFamily: "monospace" } }, l.l || "-", designButton(l.l), l.manual && !dim && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#9A6B00", background: "#FBF3DE", padding: "1px 5px", borderRadius: 4, textDecoration: "none" } }, "\uC218\uB3D9")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" } }, fmt(l.q)), hasUseCol && /* @__PURE__ */ React.createElement("td", { style: { padding: "4px 10px", textAlign: "right", textDecoration: "none" } }, dim ? /* @__PURE__ */ React.createElement("span", { style: { color: "#A7B0C0" } }, "\uC81C\uC678") : editable ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement(
+      } }, l.src === "p3l" ? "3PL" : l.src === "carton" ? "\uCE74\uD1A4\uBC15\uC2A4" : "\uC774\uCE74\uC6B4\uD2B8")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", fontFamily: "monospace" } }, l.l || "-", designButton(l.l), React.createElement(FreezeLotBadge, {freeze: frozenById?.get(l.id)}), l.manual && !dim && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#9A6B00", background: "#FBF3DE", padding: "1px 5px", borderRadius: 4, textDecoration: "none" } }, "\uC218\uB3D9")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" } }, fmt(l.q)), hasUseCol && /* @__PURE__ */ React.createElement("td", { style: { padding: "4px 10px", textAlign: "right", textDecoration: "none" } }, dim ? /* @__PURE__ */ React.createElement("span", { style: { color: "#A7B0C0" } }, "\uC81C\uC678") : editable ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement(
         "input",
         {
           type: "number",
@@ -1648,7 +1661,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     popup.document.close();
     popup.document.getElementById("printOrder").addEventListener("click", () => popup.print());
   }
-  function PurchaseOrderDialog({ shortages, suppliers, itemSuppliers = [], onSaveSuppliers, onCreateOrders, onClose, supplierOnly = false, reorder = null }) {
+  function PurchaseOrderDialog({ shortages, suppliers, itemSuppliers = [], onSaveSuppliers, onCreateOrders, onClose, supplierOnly = false, reorder = null, freezes }) {
     const [rows, setRows] = useState(() => reorder ? reorder.order.lines.map((line) => ({ ...line, short: shortages.find((s) => s.code === line.code)?.short || 0, qty: String(line.qty), supplierId: suppliers.some((s) => s.id === reorder.order.supplier.id) ? reorder.order.supplier.id : "" })) : shortages.map(({ code, name, short }) => {
       const remembered = itemSuppliers.find((b) => b.code === code)?.supplierId;
       return { code, name, short, qty: "", supplierId: suppliers.some((s) => s.id === remembered) ? remembered : "", detail: "", lot: "" };
@@ -1693,9 +1706,13 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       setRows((old) => old.map((row, i) => i === index ? { ...row, [key]: value } : row));
       invalidate();
     };
-    const lotField = (row, index) => React.createElement("div", {className: "lotfolio-lot-field"},
+    const lotField = (row, index) => {
+      const freeze = CalculatorPlan.freezeForLot(freezes, row.lot);
+      const warningId = "po-frozen-lot-" + index;
+      return React.createElement("div", null, React.createElement("div", {className: "lotfolio-lot-field"},
       React.createElement("input", {
         "aria-label": row.code + " 시리얼/로트", maxLength: 300,
+        "aria-describedby": freeze ? warningId : undefined,
         style: {...inp, minWidth: 130}, value: row.lot,
         onChange: (event) => setRow(index, "lot", event.target.value)
       }),
@@ -1703,7 +1720,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         type: "button", className: "lotfolio-generate-button", "aria-label": row.code + " 로트 생성",
         onClick: () => window.LotfolioFrame.generate(row, (lot) => setRow(index, "lot", lot))
       }, "로트 생성")
-    );
+      ), freeze && React.createElement("p", {id: warningId, className: "lotfolio-freeze-warning", role: "status"},
+        "🔒 동결된 디자인 · ", CalculatorPlan.freezeDescription(freeze))
+      );
+    };
     const saveSupplier = async () => {
       const name = supplierForm.name.trim();
       if (!name) {
@@ -1857,6 +1877,41 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     const [prevStock, setPrevStock] = useState({ p3l: null, ecount: null, carton: null });
     const [authUser, setAuthUser] = useState(null);
     const [authTier, setAuthTier] = useState(0);
+    const [freezeState, setFreezeState] = useState(null);
+    const [includeFrozen, setIncludeFrozen] = useState(false);
+    const freezes = freezeState?.uid === authUser?.uid ? freezeState?.freezes ?? null : null;
+    useEffect(() => {
+      const uid = authUser?.uid;
+      if (!uid || authTier < 1) return;
+      const update = (freezes) => {
+        setFreezeState({uid, freezes});
+        if (freezes === null) setIncludeFrozen(false);
+      };
+      const bridge = window.LotfolioFrame;
+      const subscribeDesigns = () => firebase.firestore(getFirebaseApp()).collection("lotDesigns").onSnapshot(
+        {includeMetadataChanges: true},
+        (snapshot) => {
+          if (snapshot.metadata.fromCache) return;
+          update(CalculatorPlan.freezeMap(snapshot.docs.map((doc) => ({key: doc.id, freeze: doc.data().freeze}))));
+        },
+        () => update(null)
+      );
+      if (!bridge.embedded) return subscribeDesigns();
+      // An already open workspace may still be running the shell from a prior release.
+      let stopFallback;
+      const timer = setTimeout(() => { stopFallback = subscribeDesigns(); }, 1500);
+      const stopBridge = bridge.subscribeFreezes(uid, (snapshot) => {
+        clearTimeout(timer);
+        stopFallback?.();
+        stopFallback = undefined;
+        update(snapshot);
+      });
+      return () => {
+        clearTimeout(timer);
+        stopFallback?.();
+        stopBridge();
+      };
+    }, [authUser?.uid, authTier]);
     const [authReady, setAuthReady] = useState(false);
     const [dataReady, setDataReady] = useState(false);
     const [accessError, setAccessError] = useState("");
@@ -1916,6 +1971,8 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
           setEditing(null);
           setManualAlloc({});
           setExcluded(/* @__PURE__ */ new Set());
+          setFreezeState(null);
+          setIncludeFrozen(false);
           setPartMode({});
           setWoReview(null);
           setImportedScenarios(/* @__PURE__ */ new Set());
@@ -2121,6 +2178,9 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         carton: build(stock.carton?.lots || [], "carton")
       };
     }, [stock]);
+    const frozenById = useMemo(() => CalculatorPlan.frozenLotsById(agg, freezes), [agg, freezes]);
+    const planExcluded = useMemo(() => CalculatorPlan.planExclusions(excluded, frozenById, includeFrozen),
+      [excluded, frozenById, includeFrozen]);
     useEffect(() => {
       if (!dataReady) return;
       const currentLots = Object.values(agg).flatMap((source) => Object.values(source).flatMap((it) => it.lots));
@@ -2161,7 +2221,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       else {
         lots = dedup ? [...l3, ...le.filter((l) => !isDupLot(l)), ...lc] : [...l3, ...le, ...lc];
       }
-      const used = lots.reduce((s, l) => s + (excluded.has(l.id) ? 0 : l.q), 0);
+      const used = CalculatorPlan.availableQuantity(lots, planExcluded);
       return { t3, te, tc, used, lots };
     };
     const dedupInfo = useMemo(() => {
@@ -2261,224 +2321,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         `\uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC \u2014 \uCD94\uAC00 ${added}\uAC1C, \uC5C5\uB370\uC774\uD2B8 ${updated}\uAC1C` + (skippedName > 0 ? `, \uC774\uB984 \uC911\uBCF5\uC73C\uB85C \uAC74\uB108\uB700 ${skippedName}\uAC1C` : "")
       );
     };
-    const calc = useMemo(() => {
-      const lines = order.map((o) => ({ ...o, bom: boms.find((b) => b.id === o.bomId) })).filter((o) => o.bom && o.qty > 0);
-      if (!lines.length) return null;
-      const kernelLotsByCode = {};
-      const kernelRemainByLot = {};
-      const ensureKernelLots = (code) => {
-        if (!kernelLotsByCode[code]) {
-          const lots = fefoSort(getStock(code).lots);
-          kernelLotsByCode[code] = lots;
-          kernelRemainByLot[code] = {};
-          lots.forEach((l) => {
-            kernelRemainByLot[code][l.id] = excluded.has(l.id) ? 0 : l.q;
-          });
-        }
-      };
-      const MAX_KERNEL_DEPTH = 5;
-      const resolvedByLine = lines.map((line) => {
-        const resolved = [];
-        const pushPlain = (code, name, required, expandedFrom) => {
-          const existing = resolved.find((r) => r.code === code && !r.isKernel);
-          if (existing) {
-            existing.required += required;
-            if (expandedFrom && !existing.expandedFrom) existing.expandedFrom = expandedFrom;
-            return;
-          }
-          resolved.push({ code, name, required, isKernel: false, expandedFrom: expandedFrom || null });
-        };
-        const queue = line.bom.components.map((c) => ({
-          code: c.code,
-          name: c.name,
-          required: c.qty * line.qty,
-          depth: 0,
-          expandedFrom: null
-        }));
-        while (queue.length) {
-          const item = queue.shift();
-          const kb = kernelByCode[item.code];
-          if (!kb || item.depth >= MAX_KERNEL_DEPTH) {
-            pushPlain(item.code, item.name, item.required, item.expandedFrom);
-            continue;
-          }
-          const mode = partMode[line.id]?.[item.code] || "auto";
-          if (mode === "force_finished") {
-            resolved.push({
-              code: item.code,
-              name: item.name,
-              required: item.required,
-              isKernel: true,
-              kernelMode: mode,
-              kernelFullRequired: item.required,
-              kernelExpanded: false,
-              expandedFrom: item.expandedFrom
-            });
-            continue;
-          }
-          let used = 0, shortfall;
-          if (mode === "force_expand") {
-            shortfall = item.required;
-          } else {
-            ensureKernelLots(item.code);
-            let remain = item.required;
-            for (const lot of kernelLotsByCode[item.code]) {
-              if (remain <= 0) break;
-              const avail = kernelRemainByLot[item.code][lot.id] ?? 0;
-              if (avail <= 0) continue;
-              const u = Math.min(avail, remain);
-              kernelRemainByLot[item.code][lot.id] = avail - u;
-              used += u;
-              remain -= u;
-            }
-            shortfall = remain;
-          }
-          if (used > 0 || shortfall > 0) {
-            resolved.push({
-              code: item.code,
-              name: item.name,
-              required: used,
-              isKernel: true,
-              kernelMode: mode,
-              kernelFullRequired: item.required,
-              kernelExpanded: shortfall > 0,
-              expandedFrom: item.expandedFrom
-            });
-          }
-          if (shortfall > 0) {
-            kb.components.forEach((kc) => {
-              queue.push({
-                code: kc.code,
-                name: kc.name,
-                required: kc.qty * shortfall,
-                depth: item.depth + 1,
-                expandedFrom: { code: item.code, name: item.name }
-              });
-            });
-          }
-        }
-        return resolved;
-      });
-      const need = {};
-      resolvedByLine.forEach((resolved) => resolved.forEach((c) => {
-        if (!need[c.code]) need[c.code] = { code: c.code, name: c.name, required: 0 };
-        need[c.code].required += c.required;
-      }));
-      const rows = Object.values(need).map((n) => {
-        const s = getStock(n.code);
-        const remain = s.used - n.required;
-        return { ...n, t3: s.t3, te: s.te, stock: s.used, lots: s.lots, remain, short: remain < 0 ? -remain : 0 };
-      }).sort((a, b) => (b.short > 0 ? 1 : -1) - (a.short > 0 ? 1 : -1) || a.code.localeCompare(b.code));
-      const perProduct = lines.map((l) => {
-        let solo = Infinity, after = Infinity, bottleneck = "";
-        l.bom.components.forEach((c) => {
-          const s = getStock(c.code).used;
-          const totalReq = need[c.code]?.required ?? c.qty * l.qty;
-          const othersUse = totalReq - c.qty * l.qty;
-          const so = Math.floor(s / c.qty);
-          const a = Math.floor(Math.max(0, s - othersUse) / c.qty);
-          if (so < solo) {
-            solo = so;
-            bottleneck = c.name;
-          }
-          if (a < after) after = a;
-        });
-        return { ...l, solo, after, bottleneck, ok: after >= l.qty };
-      });
-      const lotsByCode = {};
-      const remainByLot = {};
-      Object.keys(need).forEach((code) => {
-        const lots = fefoSort(getStock(code).lots);
-        lotsByCode[code] = lots;
-        remainByLot[code] = {};
-        lots.forEach((l) => {
-          remainByLot[code][l.id] = excluded.has(l.id) ? 0 : l.q;
-        });
-      });
-      const conflictByLot = {};
-      const lineDetails = lines.map((line, li) => {
-        const components = resolvedByLine[li].map((c) => {
-          const required = c.required;
-          const lots = lotsByCode[c.code] ?? [];
-          const manuals = manualAlloc[line.id]?.[c.code] ?? {};
-          let need_qty = required;
-          const lineUse = {};
-          const manualLots = new Set(Object.keys(manuals));
-          for (const lot of lots) {
-            if (excluded.has(lot.id)) continue;
-            if (!manualLots.has(lot.id)) continue;
-            const want = Math.max(0, manuals[lot.id] || 0);
-            const avail = Math.max(0, remainByLot[c.code][lot.id] ?? 0);
-            const u = Math.min(want, avail);
-            lineUse[lot.id] = u;
-            if (want > avail) {
-              conflictByLot[lot.id] = (conflictByLot[lot.id] ?? 0) + (want - avail);
-            }
-            remainByLot[c.code][lot.id] = avail - u;
-            need_qty -= u;
-          }
-          for (const lot of lots) {
-            if (excluded.has(lot.id)) continue;
-            if (manualLots.has(lot.id)) continue;
-            if (need_qty <= 0) break;
-            const avail = remainByLot[c.code][lot.id] ?? 0;
-            if (avail <= 0) continue;
-            const u = Math.min(avail, need_qty);
-            lineUse[lot.id] = u;
-            remainByLot[c.code][lot.id] = avail - u;
-            need_qty -= u;
-          }
-          const allocations = lots.map((lot) => ({
-            ...lot,
-            use: excluded.has(lot.id) ? null : lineUse[lot.id] ?? 0,
-            left: excluded.has(lot.id) ? null : remainByLot[c.code][lot.id] ?? 0,
-            excluded: excluded.has(lot.id),
-            manual: manualLots.has(lot.id),
-            manualWant: manualLots.has(lot.id) ? Math.max(0, manuals[lot.id] || 0) : null,
-            conflictQty: manualLots.has(lot.id) && conflictByLot[lot.id] ? conflictByLot[lot.id] : 0
-          }));
-          const used = Object.values(lineUse).reduce((s, v) => s + v, 0);
-          const totalStock = lots.reduce((s, l) => s + (excluded.has(l.id) ? 0 : l.q), 0);
-          return {
-            code: c.code,
-            name: c.name,
-            perUnit: line.qty ? required / line.qty : 0,
-            required,
-            used,
-            allocations,
-            lots,
-            shortage: Math.max(0, need_qty),
-            totalStock,
-            isKernel: !!c.isKernel,
-            kernelMode: c.kernelMode || null,
-            kernelFullRequired: c.kernelFullRequired ?? null,
-            kernelExpanded: !!c.kernelExpanded,
-            expandedFrom: c.expandedFrom || null
-          };
-        });
-        return { ...line, components, hasShortage: components.some((x) => x.shortage > 0) };
-      });
-      const aggByCode = {};
-      lineDetails.forEach((line) => line.components.forEach((c) => {
-        if (!aggByCode[c.code]) aggByCode[c.code] = {};
-        c.allocations.forEach((a) => {
-          if (!a.excluded && a.use > 0) {
-            aggByCode[c.code][a.id] = (aggByCode[c.code][a.id] ?? 0) + a.use;
-          }
-        });
-      }));
-      rows.forEach((r) => {
-        r.aggAllocations = r.lots.map((lot) => ({
-          ...lot,
-          use: excluded.has(lot.id) ? null : aggByCode[r.code]?.[lot.id] ?? 0,
-          left: excluded.has(lot.id) ? null : lot.q - (aggByCode[r.code]?.[lot.id] ?? 0),
-          excluded: excluded.has(lot.id)
-        }));
-      });
-      const totalConflicts = Object.keys(conflictByLot).length;
-      const totalConflictQty = Object.values(conflictByLot).reduce((s, v) => s + v, 0);
-      return { rows, perProduct, totalShort: rows.filter((r) => r.short > 0), lineDetails, totalConflicts, totalConflictQty };
-    }, [order, boms, agg, basis, excluded, manualAlloc, dedup, partMode, kernelByCode]);
+    const calc = useMemo(() => freezes === null ? null : simulatePlan({
+      order, boms, getStock, excluded: planExcluded, manualAlloc, partMode, kernelByCode
+    }), [freezes, order, boms, agg, basis, planExcluded, manualAlloc, dedup, partMode, kernelByCode]);
+    const frozenCount = useMemo(() => new Set(calc?.rows.flatMap((row) =>
+      row.lots.filter((lot) => frozenById.has(lot.id)).map((lot) => lot.id)) ?? []).size, [calc, frozenById]);
     const stockResults = useMemo(() => {
       const t = stockQ.trim().toLowerCase();
       if (!t) return [];
@@ -2961,7 +2808,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       marginBottom: -2,
       cursor: "pointer",
       fontFamily: "inherit"
-    } }, label))), tab === "plan" && /* @__PURE__ */ React.createElement("div", null, boms.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", border: "1px dashed #E0E4EB", borderRadius: 14, padding: 32, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, "\uB4F1\uB85D\uB41C BOM\uC774 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#59657A", margin: "8px 0 16px" } }, "BOM \uAD00\uB9AC \uD0ED\uC5D0\uC11C \uB4F1\uB85D\uD558\uAC70\uB098, \uB2E4\uB978 \uCEF4\uD4E8\uD130\uC5D0\uC11C \uB0B4\uBCF4\uB0B8 \uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC744 \uBD88\uB7EC\uC62C \uC218 \uC788\uC2B5\uB2C8\uB2E4.", /* @__PURE__ */ React.createElement("br", null), "(\uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC5D0\uB294 \uC0AC\uC6A9\uB41C BOM\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 \uC790\uB3D9\uC73C\uB85C \uB4F1\uB85D\uB429\uB2C8\uB2E4)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
+    } }, label))), tab === "plan" && /* @__PURE__ */ React.createElement("div", null, React.createElement(PlanFreezeStatus, {ready: freezes !== null, includeFrozen, count: frozenCount, onToggle: setIncludeFrozen}), boms.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", border: "1px dashed #E0E4EB", borderRadius: 14, padding: 32, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, "\uB4F1\uB85D\uB41C BOM\uC774 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#59657A", margin: "8px 0 16px" } }, "BOM \uAD00\uB9AC \uD0ED\uC5D0\uC11C \uB4F1\uB85D\uD558\uAC70\uB098, \uB2E4\uB978 \uCEF4\uD4E8\uD130\uC5D0\uC11C \uB0B4\uBCF4\uB0B8 \uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC744 \uBD88\uB7EC\uC62C \uC218 \uC788\uC2B5\uB2C8\uB2E4.", /* @__PURE__ */ React.createElement("br", null), "(\uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC5D0\uB294 \uC0AC\uC6A9\uB41C BOM\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 \uC790\uB3D9\uC73C\uB85C \uB4F1\uB85D\uB429\uB2C8\uB2E4)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
       setTab("bom");
       setEditing("new");
     } }, "BOM \uB4F1\uB85D\uD558\uB7EC \uAC00\uAE30"), /* @__PURE__ */ React.createElement(
@@ -3177,9 +3024,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         lots: r.lots,
         allocations: r.aggAllocations,
         showSource: basis === "sum",
-        excluded,
+        excluded: planExcluded,
+        frozenById,
+        forceExcludeFrozen: !includeFrozen,
         onToggle: toggleLot,
-        onSelectAll: (on) => setLotsExcluded(r.lots.map((l) => l.id), !on)
+        onSelectAll: (on, ids) => setLotsExcluded(ids, !on)
       }
     ) : /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uC774 \uD488\uBAA9\uC758 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."))))))))), viewMode === "line" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", marginBottom: 10, padding: "8px 12px", background: "#EFF1F7", borderRadius: 8, lineHeight: 1.6 } }, "\u{1F4A1} \uB77C\uC778\uBCC4 \uBCF4\uAE30\uB294 \uBC1C\uC8FC \uC21C\uC11C\uB300\uB85C \uC7AC\uACE0\uB97C ", /* @__PURE__ */ React.createElement("b", null, "\uC21C\uCC28 \uBC30\uC815"), "\uD569\uB2C8\uB2E4 \u2014 \uC704\uCABD \uB77C\uC778\uC774 \uBA3C\uC800 \uC0AC\uC6A9\uD558\uACE0 \uB0A8\uC740 \uC7AC\uACE0\uB97C \uC544\uB798 \uB77C\uC778\uC774 \uBC1B\uC2B5\uB2C8\uB2E4. \uD589\uC744 \uD3BC\uCE58\uBA74 ", /* @__PURE__ */ React.createElement("b", null, '"\uC0AC\uC6A9" \uCE78\uC744 \uC9C1\uC811 \uC785\uB825'), "\uD574\uC11C \uC6D0\uD558\uB294 \uB85C\uD2B8\uB97C \uC6D0\uD558\uB294 \uB9CC\uD07C \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uCCB4\uD06C\uBC15\uC2A4\uB85C \uC0AC\uC6A9 \uC81C\uC678\uD55C \uB85C\uD2B8\uB294 \uBAA8\uB4E0 \uB77C\uC778\uC5D0\uC11C \uC0AC\uC6A9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."), calc.lineDetails.map((line, lineIdx) => /* @__PURE__ */ React.createElement("div", { key: line.id, style: { background: "#fff", border: "1px solid #E0E4EB", borderRadius: 14, overflow: "hidden", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: {
       padding: "12px 16px",
@@ -3251,9 +3100,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
           lots: c.lots,
           allocations: c.allocations,
           showSource: basis === "sum",
-          excluded,
+          excluded: planExcluded,
+          frozenById,
+          forceExcludeFrozen: !includeFrozen,
           onToggle: toggleLot,
-          onSelectAll: (on) => setLotsExcluded(c.lots.map((l) => l.id), !on),
+          onSelectAll: (on, ids) => setLotsExcluded(ids, !on),
           onAllocChange: (lotId, qty) => setManualUse(line.id, c.code, lotId, qty),
           onResetAlloc: () => resetLineComponent(line.id, c.code)
         }
@@ -3307,9 +3158,9 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
             cursor: "pointer"
           }
         },
-        /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0, flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-block", width: 14, color: "#69768A" } }, expandedStk[i.code] ? "\u25BE" : "\u25B8"), i.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", fontFamily: "monospace", paddingLeft: 14 } }, i.code), i.matchedLotNos && i.matchedLotNos.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#7A5500", paddingLeft: 14, marginTop: 3, lineHeight: 1.5 } }, "\u{1F3F7} \uC77C\uCE58 \uB85C\uD2B8: ", /* @__PURE__ */ React.createElement("b", { style: { fontFamily: "monospace" } }, i.matchedLotNos.slice(0, 5).map((lot, index) => React.createElement(React.Fragment, {key: lot}, index > 0 ? ", " : "", lot, designButton(lot))), i.matchedLotNos.length > 5 ? ` \uC678 ${i.matchedLotNos.length - 5}\uAC74` : ""))),
+        /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0, flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-block", width: 14, color: "#69768A" } }, expandedStk[i.code] ? "\u25BE" : "\u25B8"), i.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", fontFamily: "monospace", paddingLeft: 14 } }, i.code), i.matchedLotNos && i.matchedLotNos.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#7A5500", paddingLeft: 14, marginTop: 3, lineHeight: 1.5 } }, "\u{1F3F7} \uC77C\uCE58 \uB85C\uD2B8: ", /* @__PURE__ */ React.createElement("b", { style: { fontFamily: "monospace" } }, i.matchedLotNos.slice(0, 5).map((lot, index) => React.createElement(React.Fragment, {key: lot}, index > 0 ? ", " : "", lot, designButton(lot), React.createElement(FreezeLotBadge, {freeze: CalculatorPlan.freezeForLot(freezes, lot)}))), i.matchedLotNos.length > 5 ? ` \uC678 ${i.matchedLotNos.length - 5}\uAC74` : ""))),
         /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 18, textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#1D5C8A", fontWeight: 700 } }, "3PL \uC804\uC0B0"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.t3))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#4D56CB", fontWeight: 700 } }, "\uC774\uCE74\uC6B4\uD2B8"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.te))), i.tc > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#7B4D1E", fontWeight: 700 } }, "\uCE74\uD1A4\uBC15\uC2A4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.tc))))
-      ), expandedStk[i.code] && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 14px 30px", background: "#FAFAFD", borderBottom: "1px solid #F6F7FA" } }, s.lots.length ? /* @__PURE__ */ React.createElement(LotTable, { lots: s.lots, required: null, showSource: basis === "sum", searchHighlight: stockQ.trim() }) : /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. (\uAE30\uC900 \uC7AC\uACE0\uB97C \uBC14\uAFD4\uBCF4\uC138\uC694)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#69768A", marginTop: 6 } }, "\uD45C\uC2DC \uAE30\uC900: ", basisLabel)));
+      ), expandedStk[i.code] && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 14px 30px", background: "#FAFAFD", borderBottom: "1px solid #F6F7FA" } }, s.lots.length ? /* @__PURE__ */ React.createElement(LotTable, { lots: s.lots, required: null, showSource: basis === "sum", frozenById, searchHighlight: stockQ.trim() }) : /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. (\uAE30\uC900 \uC7AC\uACE0\uB97C \uBC14\uAFD4\uBCF4\uC138\uC694)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#69768A", marginTop: 6 } }, "\uD45C\uC2DC \uAE30\uC900: ", basisLabel)));
     }))), tab === "upload" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: {
       background: "#FBF3DE",
       border: "1px solid #E0C97A",
@@ -3403,7 +3254,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     )), canEditStock ? /* @__PURE__ */ React.createElement(ManualStockAddForm, { onAdd: addManualLot }) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 18, maxWidth: 640 } }, /* @__PURE__ */ React.createElement(LockedNotice, { tier: 1, label: "\uC7AC\uACE0 \uC9C1\uC811 \uCD94\uAC00" })))), poMode === "history" ? /* @__PURE__ */ React.createElement(PurchaseOrderHistory, { records: poHistory, loading: poHistoryLoading, error: poHistoryError, onClose: () => setPoMode(null), onReorder: (record) => {
       setReorder(record);
       setPoMode("order");
-    } }) : poMode && /* @__PURE__ */ React.createElement(PurchaseOrderDialog, { key: poMode + ":" + (reorder?.id || ""), shortages: calc?.totalShort || [], suppliers, itemSuppliers, onSaveSuppliers: persistSuppliers, onCreateOrders: persistPurchaseOrders, onClose: () => setPoMode(null), supplierOnly: poMode === "suppliers", reorder: poMode === "order" ? reorder : null }));
+    } }) : poMode && /* @__PURE__ */ React.createElement(PurchaseOrderDialog, { key: poMode + ":" + (reorder?.id || ""), shortages: calc?.totalShort || [], suppliers, itemSuppliers, freezes, onSaveSuppliers: persistSuppliers, onCreateOrders: persistPurchaseOrders, onClose: () => setPoMode(null), supplierOnly: poMode === "suppliers", reorder: poMode === "order" ? reorder : null }));
   }
   ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
 })();

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Box,
@@ -22,6 +22,7 @@ import { Generator, initialLotForm } from './Generator.jsx';
 import { Products, ProductEditor, ProductImport } from './Products.jsx';
 import { Designs, DesignEditor, DesignViewer } from './Designs.jsx';
 import { parseLot, nextSeq } from './lot-engine.mjs';
+import { freezeMap } from './design-freeze.mjs';
 import { QuickSearch } from './QuickSearch.jsx';
 import { Lookup, ProductLookup } from './Lookup.jsx';
 import './views.css';
@@ -220,6 +221,11 @@ function Workspace({ user, tier }) {
     search = useRef(null),
     drawerBtn = useRef(null),
     pending = useRef(null);
+  const freezes = useMemo(() => dataReady ? freezeMap(state.designs) : null, [dataReady, state.designs]);
+  const sendFreezes = useCallback((target) => {
+    target?.postMessage({type: 'lotfolio:freeze-state', uid: user.uid, freezes}, location.origin);
+  }, [user.uid, freezes]);
+  useEffect(() => sendFreezes(calculator.current?.contentWindow), [sendFreezes]);
   useEffect(() => {
     let alive = true;
     setDataReady(false);
@@ -328,6 +334,10 @@ function Workspace({ user, tier }) {
         return;
       }
       if (!fromCalc) return;
+      if (type === 'lotfolio:request-freezes') {
+        sendFreezes(e.source);
+        return;
+      }
       if (type === 'lotfolio:view-design' && typeof lotCode === 'string') {
         try {
           open('lookup', { parsed: parseLot(lotCode) });
@@ -360,7 +370,7 @@ function Workspace({ user, tier }) {
       document.removeEventListener('keydown', key);
       window.removeEventListener('message', message);
     };
-  }, [mobile, open, finishRequest]);
+  }, [mobile, open, finishRequest, sendFreezes]);
   function useDesign(design) {
     const seed = {
       code: design.code,
@@ -388,7 +398,7 @@ function Workspace({ user, tier }) {
   const Dialog = dialogs[modal?.type];
   const legacy = page === '/calculator' || page === '/warehouse';
   return (
-    <Ctx.Provider value={{ state, dataReady, dataError, store, open, close, notify, user, useDesign, navigate }}>
+    <Ctx.Provider value={{ state, dataReady, dataError, store, open, close, notify, user, tier, useDesign, navigate }}>
       <div className="shell">
         {mobile && <button className="scrim" aria-label="메뉴 닫기" onClick={() => setMobile(false)} />}
         <aside id="site-menu" className={'sidebar ' + (mobile ? 'shown' : '')}>

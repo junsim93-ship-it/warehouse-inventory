@@ -205,6 +205,100 @@
   margin-bottom: 12px;
   border-radius: 7px;
 }
+.design-card.is-frozen {
+  border-color: #c07b4c;
+  box-shadow: inset 0 -3px #c07b4c;
+}
+.freeze-badge,
+.freeze-banner {
+  color: #773d23;
+  background: #fff1e5;
+  border: 1px solid #efc7ab;
+}
+.freeze-badge,
+.freeze-banner strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.freeze-badge {
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.freeze-banner {
+  padding: 10px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.freeze-banner p {
+  margin: 4px 0 0;
+}
+.freeze-banner dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  margin: 6px 0 0;
+}
+.freeze-banner dt {
+  font-weight: 650;
+}
+.freeze-banner dd {
+  margin: 0;
+  min-width: 0;
+}
+.freeze-controls {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+}
+.freeze-controls .freeze-banner,
+.freeze-history {
+  width: 100%;
+}
+.freeze-controls:has(> *) {
+  margin-bottom: 14px;
+}
+.unified-lookup .freeze-controls {
+  margin-bottom: 0;
+}
+.freeze-history {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.freeze-history summary {
+  cursor: pointer;
+}
+.freeze-history li + li {
+  margin-top: 7px;
+}
+.freeze-history p {
+  margin: 0;
+}
+.freeze-editor,
+.freeze-editor label {
+  display: grid;
+  gap: 6px;
+}
+.freeze-editor {
+  gap: 12px;
+}
+.freeze-editor code {
+  overflow-wrap: anywhere;
+}
+.result-card .freeze-banner,
+.linked .freeze-banner {
+  margin: 0 0 12px;
+}
+.linked .freeze-banner {
+  margin-inline: 14px;
+}
 @media (max-width: 760px) {
   .lookup-columns {
     grid-template-columns: 1fr;

@@ -125,3 +125,35 @@ test('the frame validates reply origin, sender, request ID and lot, handles canc
   events.keydown({key:'K',ctrlKey:true,preventDefault:() => {prevented = true;}});
   assert.ok(prevented); assert.equal(messages.at(-1).type,'lotfolio:search');
 });
+
+test('the calculator accepts freeze updates only from its own parent and active user', () => {
+  const origin='https://warehouse.example';
+  const sent=[], states=[];
+  const handlers=new Map();
+  const parent={postMessage:(message,target)=>{assert.equal(target,origin);sent.push(message.type);}};
+  const window={parent,
+    addEventListener(name,callback) {
+      if (!handlers.has(name)) handlers.set(name,new Set());
+      handlers.get(name).add(callback);
+    },
+    removeEventListener(name,callback) {handlers.get(name).delete(callback);}
+  };
+  const document={documentElement:{setAttribute(){}},addEventListener(){}};
+  vm.runInNewContext(fs.readFileSync('hosting/unified/assets/lotfolio-frame.js','utf8'),
+    {window,document,location:{origin}});
+  const stop=window.LotfolioFrame.subscribeFreezes('current',snapshot=>states.push(snapshot));
+  assert.deepEqual(sent,['lotfolio:request-freezes']);
+  const valid={origin,source:parent,data:{type:'lotfolio:freeze-state',uid:'current',freezes:{}}};
+  const receive=(event)=>handlers.get('message').forEach(handler=>handler(event));
+  receive({...valid,origin:'https://other.example'});
+  receive({...valid,source:{}});
+  receive({...valid,data:{...valid.data,uid:'previous'}});
+  receive({...valid,data:{...valid.data,freezes:[]}});
+  assert.deepEqual(states,[]);
+  receive(valid);
+  receive({...valid,data:{...valid.data,freezes:null}});
+  assert.deepEqual(states,[{},null]);
+  stop();
+  receive(valid);
+  assert.equal(states.length,2);
+});

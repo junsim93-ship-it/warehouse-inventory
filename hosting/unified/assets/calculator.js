@@ -382,33 +382,7 @@
     });
     return { bom: best, score: bestScore };
   }
-  var fefoSort = (lots) => [...lots].sort((a, b) => {
-    if (a.e && b.e) return a.e.localeCompare(b.e) || a.l.localeCompare(b.l);
-    if (a.e) return -1;
-    if (b.e) return 1;
-    return a.l.localeCompare(b.l);
-  });
-  function allocateLots(lots, required, excluded) {
-    const exSet = excluded || /* @__PURE__ */ new Set();
-    const usable = fefoSort(lots.filter((l) => !exSet.has(l.id)));
-    let remain = required;
-    const usedMap = /* @__PURE__ */ new Map();
-    for (const lot of usable) {
-      const u = Math.min(lot.q, Math.max(0, remain));
-      usedMap.set(lot.id, u);
-      remain -= u;
-    }
-    return fefoSort(lots).map((lot) => {
-      const isExcluded = exSet.has(lot.id);
-      const u = usedMap.get(lot.id) ?? 0;
-      return {
-        ...lot,
-        use: isExcluded ? null : u,
-        left: isExcluded ? null : lot.q - u,
-        excluded: isExcluded
-      };
-    });
-  }
+  const { fefoSort, allocateLots, simulatePlan } = CalculatorPlan;
   function ItemSearch({ items, onPick }) {
     const [q, setQ] = useState("");
     const [open, setOpen] = useState(false);
@@ -837,7 +811,27 @@
       onClick: (event) => { event.stopPropagation(); bridge.view(parsed.lot); }
     }, "시안");
   }
-  function LotTable({ lots, required, allocations, showSource, excluded, onToggle, onSelectAll, onAllocChange, onResetAlloc, searchHighlight }) {
+  function FreezeLotBadge({ freeze }) {
+    if (!freeze) return null;
+    const description = CalculatorPlan.freezeDescription(freeze);
+    return React.createElement("details", {className: "lotfolio-freeze-lot", onClick: (event) => event.stopPropagation()},
+      React.createElement("summary", {title: description}, "🔒 동결 · ", CalculatorPlan.freezeReason(freeze.reason)),
+      React.createElement("span", null, description)
+    );
+  }
+  function PlanFreezeStatus({ ready, includeFrozen, count, onToggle }) {
+    return React.createElement("section", {className: "lotfolio-freeze-plan", "aria-label": "동결 로트 계산 설정"},
+      React.createElement("span", {role: "status"}, !ready
+        ? "디자인 동결 상태를 확인할 수 있을 때 발주 계산 결과가 표시됩니다."
+        : includeFrozen ? "동결 로트 자동 제외 해제" : `동결 로트 ${count}건 제외 중`),
+      React.createElement("label", null,
+        React.createElement("input", {type: "checkbox", checked: includeFrozen, disabled: !ready,
+          onChange: (event) => onToggle(event.target.checked)}),
+        "동결 로트 포함해서 계산"
+      )
+    );
+  }
+  function LotTable({ lots, required, allocations, showSource, excluded, frozenById, forceExcludeFrozen, onToggle, onSelectAll, onAllocChange, onResetAlloc, searchHighlight }) {
     let alloc;
     if (allocations) {
       alloc = allocations;
@@ -848,14 +842,15 @@
     }
     const interactive = !!onToggle;
     const editable = !!onAllocChange;
-    const allOn = interactive && lots.every((l) => !excluded?.has(l.id));
-    const allOff = interactive && lots.every((l) => excluded?.has(l.id));
+    const selectable = interactive ? lots.filter((lot) => !forceExcludeFrozen || !frozenById?.has(lot.id)) : [];
+    const allOn = selectable.every((l) => !excluded?.has(l.id));
+    const allOff = selectable.every((l) => excluded?.has(l.id));
     const hasUseCol = alloc.some((a) => a.use != null);
     const hasManual = alloc.some((a) => a.manual);
-    return /* @__PURE__ */ React.createElement("div", null, (interactive || editable && hasManual) && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6, fontSize: 11.5, flexWrap: "wrap" } }, interactive && lots.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+    return /* @__PURE__ */ React.createElement("div", null, (interactive || editable && hasManual) && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 6, fontSize: 11.5, flexWrap: "wrap" } }, interactive && selectable.length > 1 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
       "button",
       {
-        onClick: () => onSelectAll(true),
+        onClick: () => onSelectAll(true, selectable.map((lot) => lot.id)),
         disabled: allOn,
         style: {
           border: "1px solid #E0E4EB",
@@ -873,7 +868,7 @@
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
-        onClick: () => onSelectAll(false),
+        onClick: () => onSelectAll(false, selectable.map((lot) => lot.id)),
         disabled: allOff,
         style: {
           border: "1px solid #E0E4EB",
@@ -921,6 +916,8 @@
         {
           type: "checkbox",
           checked: !dim,
+          disabled: forceExcludeFrozen && frozenById?.has(l.id),
+          "aria-label": l.l + " 사용",
           onChange: () => onToggle(l.id),
           style: { cursor: "pointer", width: 14, height: 14, accentColor: "#4D56CB" }
         }
@@ -932,7 +929,7 @@
         background: l.src === "p3l" ? "#E4EEF6" : l.src === "carton" ? "#F5EDE4" : "#EDEEFF",
         color: l.src === "p3l" ? "#1D5C8A" : l.src === "carton" ? "#7B4D1E" : "#4D56CB",
         opacity: dim ? 0.5 : 1
-      } }, l.src === "p3l" ? "3PL" : l.src === "carton" ? "\uCE74\uD1A4\uBC15\uC2A4" : "\uC774\uCE74\uC6B4\uD2B8")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", fontFamily: "monospace" } }, l.l || "-", designButton(l.l), l.manual && !dim && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#9A6B00", background: "#FBF3DE", padding: "1px 5px", borderRadius: 4, textDecoration: "none" } }, "\uC218\uB3D9")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" } }, fmt(l.q)), hasUseCol && /* @__PURE__ */ React.createElement("td", { style: { padding: "4px 10px", textAlign: "right", textDecoration: "none" } }, dim ? /* @__PURE__ */ React.createElement("span", { style: { color: "#A7B0C0" } }, "\uC81C\uC678") : editable ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement(
+      } }, l.src === "p3l" ? "3PL" : l.src === "carton" ? "\uCE74\uD1A4\uBC15\uC2A4" : "\uC774\uCE74\uC6B4\uD2B8")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", fontFamily: "monospace" } }, l.l || "-", designButton(l.l), React.createElement(FreezeLotBadge, {freeze: frozenById?.get(l.id)}), l.manual && !dim && /* @__PURE__ */ React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, color: "#9A6B00", background: "#FBF3DE", padding: "1px 5px", borderRadius: 4, textDecoration: "none" } }, "\uC218\uB3D9")), /* @__PURE__ */ React.createElement("td", { style: { padding: "7px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" } }, fmt(l.q)), hasUseCol && /* @__PURE__ */ React.createElement("td", { style: { padding: "4px 10px", textAlign: "right", textDecoration: "none" } }, dim ? /* @__PURE__ */ React.createElement("span", { style: { color: "#A7B0C0" } }, "\uC81C\uC678") : editable ? /* @__PURE__ */ React.createElement("div", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 2 } }, /* @__PURE__ */ React.createElement(
         "input",
         {
           type: "number",
@@ -1043,7 +1040,7 @@
     popup.document.close();
     popup.document.getElementById("printOrder").addEventListener("click", () => popup.print());
   }
-  function PurchaseOrderDialog({ shortages, suppliers, itemSuppliers = [], onSaveSuppliers, onCreateOrders, onClose, supplierOnly = false, reorder = null }) {
+  function PurchaseOrderDialog({ shortages, suppliers, itemSuppliers = [], onSaveSuppliers, onCreateOrders, onClose, supplierOnly = false, reorder = null, freezes }) {
     const [rows, setRows] = useState(() => reorder ? reorder.order.lines.map((line) => ({ ...line, short: shortages.find((s) => s.code === line.code)?.short || 0, qty: String(line.qty), supplierId: suppliers.some((s) => s.id === reorder.order.supplier.id) ? reorder.order.supplier.id : "" })) : shortages.map(({ code, name, short }) => {
       const remembered = itemSuppliers.find((b) => b.code === code)?.supplierId;
       return { code, name, short, qty: "", supplierId: suppliers.some((s) => s.id === remembered) ? remembered : "", detail: "", lot: "" };
@@ -1088,9 +1085,13 @@
       setRows((old) => old.map((row, i) => i === index ? { ...row, [key]: value } : row));
       invalidate();
     };
-    const lotField = (row, index) => React.createElement("div", {className: "lotfolio-lot-field"},
+    const lotField = (row, index) => {
+      const freeze = CalculatorPlan.freezeForLot(freezes, row.lot);
+      const warningId = "po-frozen-lot-" + index;
+      return React.createElement("div", null, React.createElement("div", {className: "lotfolio-lot-field"},
       React.createElement("input", {
         "aria-label": row.code + " 시리얼/로트", maxLength: 300,
+        "aria-describedby": freeze ? warningId : undefined,
         style: {...inp, minWidth: 130}, value: row.lot,
         onChange: (event) => setRow(index, "lot", event.target.value)
       }),
@@ -1098,7 +1099,10 @@
         type: "button", className: "lotfolio-generate-button", "aria-label": row.code + " 로트 생성",
         onClick: () => window.LotfolioFrame.generate(row, (lot) => setRow(index, "lot", lot))
       }, "로트 생성")
-    );
+      ), freeze && React.createElement("p", {id: warningId, className: "lotfolio-freeze-warning", role: "status"},
+        "🔒 동결된 디자인 · ", CalculatorPlan.freezeDescription(freeze))
+      );
+    };
     const saveSupplier = async () => {
       const name = supplierForm.name.trim();
       if (!name) {
@@ -1252,6 +1256,41 @@
     const [prevStock, setPrevStock] = useState({ p3l: null, ecount: null, carton: null });
     const [authUser, setAuthUser] = useState(null);
     const [authTier, setAuthTier] = useState(0);
+    const [freezeState, setFreezeState] = useState(null);
+    const [includeFrozen, setIncludeFrozen] = useState(false);
+    const freezes = freezeState?.uid === authUser?.uid ? freezeState?.freezes ?? null : null;
+    useEffect(() => {
+      const uid = authUser?.uid;
+      if (!uid || authTier < 1) return;
+      const update = (freezes) => {
+        setFreezeState({uid, freezes});
+        if (freezes === null) setIncludeFrozen(false);
+      };
+      const bridge = window.LotfolioFrame;
+      const subscribeDesigns = () => firebase.firestore(getFirebaseApp()).collection("lotDesigns").onSnapshot(
+        {includeMetadataChanges: true},
+        (snapshot) => {
+          if (snapshot.metadata.fromCache) return;
+          update(CalculatorPlan.freezeMap(snapshot.docs.map((doc) => ({key: doc.id, freeze: doc.data().freeze}))));
+        },
+        () => update(null)
+      );
+      if (!bridge.embedded) return subscribeDesigns();
+      // An already open workspace may still be running the shell from a prior release.
+      let stopFallback;
+      const timer = setTimeout(() => { stopFallback = subscribeDesigns(); }, 1500);
+      const stopBridge = bridge.subscribeFreezes(uid, (snapshot) => {
+        clearTimeout(timer);
+        stopFallback?.();
+        stopFallback = undefined;
+        update(snapshot);
+      });
+      return () => {
+        clearTimeout(timer);
+        stopFallback?.();
+        stopBridge();
+      };
+    }, [authUser?.uid, authTier]);
     const [authReady, setAuthReady] = useState(false);
     const [dataReady, setDataReady] = useState(false);
     const [accessError, setAccessError] = useState("");
@@ -1311,6 +1350,8 @@
           setEditing(null);
           setManualAlloc({});
           setExcluded(/* @__PURE__ */ new Set());
+          setFreezeState(null);
+          setIncludeFrozen(false);
           setPartMode({});
           setWoReview(null);
           setImportedScenarios(/* @__PURE__ */ new Set());
@@ -1516,6 +1557,9 @@
         carton: build(stock.carton?.lots || [], "carton")
       };
     }, [stock]);
+    const frozenById = useMemo(() => CalculatorPlan.frozenLotsById(agg, freezes), [agg, freezes]);
+    const planExcluded = useMemo(() => CalculatorPlan.planExclusions(excluded, frozenById, includeFrozen),
+      [excluded, frozenById, includeFrozen]);
     useEffect(() => {
       if (!dataReady) return;
       const currentLots = Object.values(agg).flatMap((source) => Object.values(source).flatMap((it) => it.lots));
@@ -1556,7 +1600,7 @@
       else {
         lots = dedup ? [...l3, ...le.filter((l) => !isDupLot(l)), ...lc] : [...l3, ...le, ...lc];
       }
-      const used = lots.reduce((s, l) => s + (excluded.has(l.id) ? 0 : l.q), 0);
+      const used = CalculatorPlan.availableQuantity(lots, planExcluded);
       return { t3, te, tc, used, lots };
     };
     const dedupInfo = useMemo(() => {
@@ -1656,224 +1700,11 @@
         `\uBD88\uB7EC\uC624\uAE30 \uC644\uB8CC \u2014 \uCD94\uAC00 ${added}\uAC1C, \uC5C5\uB370\uC774\uD2B8 ${updated}\uAC1C` + (skippedName > 0 ? `, \uC774\uB984 \uC911\uBCF5\uC73C\uB85C \uAC74\uB108\uB700 ${skippedName}\uAC1C` : "")
       );
     };
-    const calc = useMemo(() => {
-      const lines = order.map((o) => ({ ...o, bom: boms.find((b) => b.id === o.bomId) })).filter((o) => o.bom && o.qty > 0);
-      if (!lines.length) return null;
-      const kernelLotsByCode = {};
-      const kernelRemainByLot = {};
-      const ensureKernelLots = (code) => {
-        if (!kernelLotsByCode[code]) {
-          const lots = fefoSort(getStock(code).lots);
-          kernelLotsByCode[code] = lots;
-          kernelRemainByLot[code] = {};
-          lots.forEach((l) => {
-            kernelRemainByLot[code][l.id] = excluded.has(l.id) ? 0 : l.q;
-          });
-        }
-      };
-      const MAX_KERNEL_DEPTH = 5;
-      const resolvedByLine = lines.map((line) => {
-        const resolved = [];
-        const pushPlain = (code, name, required, expandedFrom) => {
-          const existing = resolved.find((r) => r.code === code && !r.isKernel);
-          if (existing) {
-            existing.required += required;
-            if (expandedFrom && !existing.expandedFrom) existing.expandedFrom = expandedFrom;
-            return;
-          }
-          resolved.push({ code, name, required, isKernel: false, expandedFrom: expandedFrom || null });
-        };
-        const queue = line.bom.components.map((c) => ({
-          code: c.code,
-          name: c.name,
-          required: c.qty * line.qty,
-          depth: 0,
-          expandedFrom: null
-        }));
-        while (queue.length) {
-          const item = queue.shift();
-          const kb = kernelByCode[item.code];
-          if (!kb || item.depth >= MAX_KERNEL_DEPTH) {
-            pushPlain(item.code, item.name, item.required, item.expandedFrom);
-            continue;
-          }
-          const mode = partMode[line.id]?.[item.code] || "auto";
-          if (mode === "force_finished") {
-            resolved.push({
-              code: item.code,
-              name: item.name,
-              required: item.required,
-              isKernel: true,
-              kernelMode: mode,
-              kernelFullRequired: item.required,
-              kernelExpanded: false,
-              expandedFrom: item.expandedFrom
-            });
-            continue;
-          }
-          let used = 0, shortfall;
-          if (mode === "force_expand") {
-            shortfall = item.required;
-          } else {
-            ensureKernelLots(item.code);
-            let remain = item.required;
-            for (const lot of kernelLotsByCode[item.code]) {
-              if (remain <= 0) break;
-              const avail = kernelRemainByLot[item.code][lot.id] ?? 0;
-              if (avail <= 0) continue;
-              const u = Math.min(avail, remain);
-              kernelRemainByLot[item.code][lot.id] = avail - u;
-              used += u;
-              remain -= u;
-            }
-            shortfall = remain;
-          }
-          if (used > 0 || shortfall > 0) {
-            resolved.push({
-              code: item.code,
-              name: item.name,
-              required: used,
-              isKernel: true,
-              kernelMode: mode,
-              kernelFullRequired: item.required,
-              kernelExpanded: shortfall > 0,
-              expandedFrom: item.expandedFrom
-            });
-          }
-          if (shortfall > 0) {
-            kb.components.forEach((kc) => {
-              queue.push({
-                code: kc.code,
-                name: kc.name,
-                required: kc.qty * shortfall,
-                depth: item.depth + 1,
-                expandedFrom: { code: item.code, name: item.name }
-              });
-            });
-          }
-        }
-        return resolved;
-      });
-      const need = {};
-      resolvedByLine.forEach((resolved) => resolved.forEach((c) => {
-        if (!need[c.code]) need[c.code] = { code: c.code, name: c.name, required: 0 };
-        need[c.code].required += c.required;
-      }));
-      const rows = Object.values(need).map((n) => {
-        const s = getStock(n.code);
-        const remain = s.used - n.required;
-        return { ...n, t3: s.t3, te: s.te, stock: s.used, lots: s.lots, remain, short: remain < 0 ? -remain : 0 };
-      }).sort((a, b) => (b.short > 0 ? 1 : -1) - (a.short > 0 ? 1 : -1) || a.code.localeCompare(b.code));
-      const perProduct = lines.map((l) => {
-        let solo = Infinity, after = Infinity, bottleneck = "";
-        l.bom.components.forEach((c) => {
-          const s = getStock(c.code).used;
-          const totalReq = need[c.code]?.required ?? c.qty * l.qty;
-          const othersUse = totalReq - c.qty * l.qty;
-          const so = Math.floor(s / c.qty);
-          const a = Math.floor(Math.max(0, s - othersUse) / c.qty);
-          if (so < solo) {
-            solo = so;
-            bottleneck = c.name;
-          }
-          if (a < after) after = a;
-        });
-        return { ...l, solo, after, bottleneck, ok: after >= l.qty };
-      });
-      const lotsByCode = {};
-      const remainByLot = {};
-      Object.keys(need).forEach((code) => {
-        const lots = fefoSort(getStock(code).lots);
-        lotsByCode[code] = lots;
-        remainByLot[code] = {};
-        lots.forEach((l) => {
-          remainByLot[code][l.id] = excluded.has(l.id) ? 0 : l.q;
-        });
-      });
-      const conflictByLot = {};
-      const lineDetails = lines.map((line, li) => {
-        const components = resolvedByLine[li].map((c) => {
-          const required = c.required;
-          const lots = lotsByCode[c.code] ?? [];
-          const manuals = manualAlloc[line.id]?.[c.code] ?? {};
-          let need_qty = required;
-          const lineUse = {};
-          const manualLots = new Set(Object.keys(manuals));
-          for (const lot of lots) {
-            if (excluded.has(lot.id)) continue;
-            if (!manualLots.has(lot.id)) continue;
-            const want = Math.max(0, manuals[lot.id] || 0);
-            const avail = Math.max(0, remainByLot[c.code][lot.id] ?? 0);
-            const u = Math.min(want, avail);
-            lineUse[lot.id] = u;
-            if (want > avail) {
-              conflictByLot[lot.id] = (conflictByLot[lot.id] ?? 0) + (want - avail);
-            }
-            remainByLot[c.code][lot.id] = avail - u;
-            need_qty -= u;
-          }
-          for (const lot of lots) {
-            if (excluded.has(lot.id)) continue;
-            if (manualLots.has(lot.id)) continue;
-            if (need_qty <= 0) break;
-            const avail = remainByLot[c.code][lot.id] ?? 0;
-            if (avail <= 0) continue;
-            const u = Math.min(avail, need_qty);
-            lineUse[lot.id] = u;
-            remainByLot[c.code][lot.id] = avail - u;
-            need_qty -= u;
-          }
-          const allocations = lots.map((lot) => ({
-            ...lot,
-            use: excluded.has(lot.id) ? null : lineUse[lot.id] ?? 0,
-            left: excluded.has(lot.id) ? null : remainByLot[c.code][lot.id] ?? 0,
-            excluded: excluded.has(lot.id),
-            manual: manualLots.has(lot.id),
-            manualWant: manualLots.has(lot.id) ? Math.max(0, manuals[lot.id] || 0) : null,
-            conflictQty: manualLots.has(lot.id) && conflictByLot[lot.id] ? conflictByLot[lot.id] : 0
-          }));
-          const used = Object.values(lineUse).reduce((s, v) => s + v, 0);
-          const totalStock = lots.reduce((s, l) => s + (excluded.has(l.id) ? 0 : l.q), 0);
-          return {
-            code: c.code,
-            name: c.name,
-            perUnit: line.qty ? required / line.qty : 0,
-            required,
-            used,
-            allocations,
-            lots,
-            shortage: Math.max(0, need_qty),
-            totalStock,
-            isKernel: !!c.isKernel,
-            kernelMode: c.kernelMode || null,
-            kernelFullRequired: c.kernelFullRequired ?? null,
-            kernelExpanded: !!c.kernelExpanded,
-            expandedFrom: c.expandedFrom || null
-          };
-        });
-        return { ...line, components, hasShortage: components.some((x) => x.shortage > 0) };
-      });
-      const aggByCode = {};
-      lineDetails.forEach((line) => line.components.forEach((c) => {
-        if (!aggByCode[c.code]) aggByCode[c.code] = {};
-        c.allocations.forEach((a) => {
-          if (!a.excluded && a.use > 0) {
-            aggByCode[c.code][a.id] = (aggByCode[c.code][a.id] ?? 0) + a.use;
-          }
-        });
-      }));
-      rows.forEach((r) => {
-        r.aggAllocations = r.lots.map((lot) => ({
-          ...lot,
-          use: excluded.has(lot.id) ? null : aggByCode[r.code]?.[lot.id] ?? 0,
-          left: excluded.has(lot.id) ? null : lot.q - (aggByCode[r.code]?.[lot.id] ?? 0),
-          excluded: excluded.has(lot.id)
-        }));
-      });
-      const totalConflicts = Object.keys(conflictByLot).length;
-      const totalConflictQty = Object.values(conflictByLot).reduce((s, v) => s + v, 0);
-      return { rows, perProduct, totalShort: rows.filter((r) => r.short > 0), lineDetails, totalConflicts, totalConflictQty };
-    }, [order, boms, agg, basis, excluded, manualAlloc, dedup, partMode, kernelByCode]);
+    const calc = useMemo(() => freezes === null ? null : simulatePlan({
+      order, boms, getStock, excluded: planExcluded, manualAlloc, partMode, kernelByCode
+    }), [freezes, order, boms, agg, basis, planExcluded, manualAlloc, dedup, partMode, kernelByCode]);
+    const frozenCount = useMemo(() => new Set(calc?.rows.flatMap((row) =>
+      row.lots.filter((lot) => frozenById.has(lot.id)).map((lot) => lot.id)) ?? []).size, [calc, frozenById]);
     const stockResults = useMemo(() => {
       const t = stockQ.trim().toLowerCase();
       if (!t) return [];
@@ -2356,7 +2187,7 @@
       marginBottom: -2,
       cursor: "pointer",
       fontFamily: "inherit"
-    } }, label))), tab === "plan" && /* @__PURE__ */ React.createElement("div", null, boms.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", border: "1px dashed #E0E4EB", borderRadius: 14, padding: 32, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, "\uB4F1\uB85D\uB41C BOM\uC774 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#59657A", margin: "8px 0 16px" } }, "BOM \uAD00\uB9AC \uD0ED\uC5D0\uC11C \uB4F1\uB85D\uD558\uAC70\uB098, \uB2E4\uB978 \uCEF4\uD4E8\uD130\uC5D0\uC11C \uB0B4\uBCF4\uB0B8 \uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC744 \uBD88\uB7EC\uC62C \uC218 \uC788\uC2B5\uB2C8\uB2E4.", /* @__PURE__ */ React.createElement("br", null), "(\uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC5D0\uB294 \uC0AC\uC6A9\uB41C BOM\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 \uC790\uB3D9\uC73C\uB85C \uB4F1\uB85D\uB429\uB2C8\uB2E4)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
+    } }, label))), tab === "plan" && /* @__PURE__ */ React.createElement("div", null, React.createElement(PlanFreezeStatus, {ready: freezes !== null, includeFrozen, count: frozenCount, onToggle: setIncludeFrozen}), boms.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { background: "#fff", border: "1px dashed #E0E4EB", borderRadius: 14, padding: 32, textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 700 } }, "\uB4F1\uB85D\uB41C BOM\uC774 \uC544\uC9C1 \uC5C6\uC2B5\uB2C8\uB2E4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: "#59657A", margin: "8px 0 16px" } }, "BOM \uAD00\uB9AC \uD0ED\uC5D0\uC11C \uB4F1\uB85D\uD558\uAC70\uB098, \uB2E4\uB978 \uCEF4\uD4E8\uD130\uC5D0\uC11C \uB0B4\uBCF4\uB0B8 \uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC744 \uBD88\uB7EC\uC62C \uC218 \uC788\uC2B5\uB2C8\uB2E4.", /* @__PURE__ */ React.createElement("br", null), "(\uBC1C\uC8FC \uACB0\uACFC \uC5D1\uC140\uC5D0\uB294 \uC0AC\uC6A9\uB41C BOM\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uC5B4 \uC790\uB3D9\uC73C\uB85C \uB4F1\uB85D\uB429\uB2C8\uB2E4)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" } }, /* @__PURE__ */ React.createElement(Btn, { onClick: () => {
       setTab("bom");
       setEditing("new");
     } }, "BOM \uB4F1\uB85D\uD558\uB7EC \uAC00\uAE30"), /* @__PURE__ */ React.createElement(
@@ -2572,9 +2403,11 @@
         lots: r.lots,
         allocations: r.aggAllocations,
         showSource: basis === "sum",
-        excluded,
+        excluded: planExcluded,
+        frozenById,
+        forceExcludeFrozen: !includeFrozen,
         onToggle: toggleLot,
-        onSelectAll: (on) => setLotsExcluded(r.lots.map((l) => l.id), !on)
+        onSelectAll: (on, ids) => setLotsExcluded(ids, !on)
       }
     ) : /* @__PURE__ */ React.createElement("div", { style: { padding: "10px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uC774 \uD488\uBAA9\uC758 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."))))))))), viewMode === "line" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", marginBottom: 10, padding: "8px 12px", background: "#EFF1F7", borderRadius: 8, lineHeight: 1.6 } }, "\u{1F4A1} \uB77C\uC778\uBCC4 \uBCF4\uAE30\uB294 \uBC1C\uC8FC \uC21C\uC11C\uB300\uB85C \uC7AC\uACE0\uB97C ", /* @__PURE__ */ React.createElement("b", null, "\uC21C\uCC28 \uBC30\uC815"), "\uD569\uB2C8\uB2E4 \u2014 \uC704\uCABD \uB77C\uC778\uC774 \uBA3C\uC800 \uC0AC\uC6A9\uD558\uACE0 \uB0A8\uC740 \uC7AC\uACE0\uB97C \uC544\uB798 \uB77C\uC778\uC774 \uBC1B\uC2B5\uB2C8\uB2E4. \uD589\uC744 \uD3BC\uCE58\uBA74 ", /* @__PURE__ */ React.createElement("b", null, '"\uC0AC\uC6A9" \uCE78\uC744 \uC9C1\uC811 \uC785\uB825'), "\uD574\uC11C \uC6D0\uD558\uB294 \uB85C\uD2B8\uB97C \uC6D0\uD558\uB294 \uB9CC\uD07C \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uCCB4\uD06C\uBC15\uC2A4\uB85C \uC0AC\uC6A9 \uC81C\uC678\uD55C \uB85C\uD2B8\uB294 \uBAA8\uB4E0 \uB77C\uC778\uC5D0\uC11C \uC0AC\uC6A9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."), calc.lineDetails.map((line, lineIdx) => /* @__PURE__ */ React.createElement("div", { key: line.id, style: { background: "#fff", border: "1px solid #E0E4EB", borderRadius: 14, overflow: "hidden", marginBottom: 14 } }, /* @__PURE__ */ React.createElement("div", { style: {
       padding: "12px 16px",
@@ -2646,9 +2479,11 @@
           lots: c.lots,
           allocations: c.allocations,
           showSource: basis === "sum",
-          excluded,
+          excluded: planExcluded,
+          frozenById,
+          forceExcludeFrozen: !includeFrozen,
           onToggle: toggleLot,
-          onSelectAll: (on) => setLotsExcluded(c.lots.map((l) => l.id), !on),
+          onSelectAll: (on, ids) => setLotsExcluded(ids, !on),
           onAllocChange: (lotId, qty) => setManualUse(line.id, c.code, lotId, qty),
           onResetAlloc: () => resetLineComponent(line.id, c.code)
         }
@@ -2702,9 +2537,9 @@
             cursor: "pointer"
           }
         },
-        /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0, flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-block", width: 14, color: "#69768A" } }, expandedStk[i.code] ? "\u25BE" : "\u25B8"), i.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", fontFamily: "monospace", paddingLeft: 14 } }, i.code), i.matchedLotNos && i.matchedLotNos.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#7A5500", paddingLeft: 14, marginTop: 3, lineHeight: 1.5 } }, "\u{1F3F7} \uC77C\uCE58 \uB85C\uD2B8: ", /* @__PURE__ */ React.createElement("b", { style: { fontFamily: "monospace" } }, i.matchedLotNos.slice(0, 5).map((lot, index) => React.createElement(React.Fragment, {key: lot}, index > 0 ? ", " : "", lot, designButton(lot))), i.matchedLotNos.length > 5 ? ` \uC678 ${i.matchedLotNos.length - 5}\uAC74` : ""))),
+        /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0, flex: 1 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, fontWeight: 600 } }, /* @__PURE__ */ React.createElement("span", { style: { display: "inline-block", width: 14, color: "#69768A" } }, expandedStk[i.code] ? "\u25BE" : "\u25B8"), i.name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: "#59657A", fontFamily: "monospace", paddingLeft: 14 } }, i.code), i.matchedLotNos && i.matchedLotNos.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: "#7A5500", paddingLeft: 14, marginTop: 3, lineHeight: 1.5 } }, "\u{1F3F7} \uC77C\uCE58 \uB85C\uD2B8: ", /* @__PURE__ */ React.createElement("b", { style: { fontFamily: "monospace" } }, i.matchedLotNos.slice(0, 5).map((lot, index) => React.createElement(React.Fragment, {key: lot}, index > 0 ? ", " : "", lot, designButton(lot), React.createElement(FreezeLotBadge, {freeze: CalculatorPlan.freezeForLot(freezes, lot)}))), i.matchedLotNos.length > 5 ? ` \uC678 ${i.matchedLotNos.length - 5}\uAC74` : ""))),
         /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 18, textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#1D5C8A", fontWeight: 700 } }, "3PL \uC804\uC0B0"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.t3))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#4D56CB", fontWeight: 700 } }, "\uC774\uCE74\uC6B4\uD2B8"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.te))), i.tc > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 10.5, color: "#7B4D1E", fontWeight: 700 } }, "\uCE74\uD1A4\uBC15\uC2A4"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" } }, fmt(i.tc))))
-      ), expandedStk[i.code] && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 14px 30px", background: "#FAFAFD", borderBottom: "1px solid #F6F7FA" } }, s.lots.length ? /* @__PURE__ */ React.createElement(LotTable, { lots: s.lots, required: null, showSource: basis === "sum", searchHighlight: stockQ.trim() }) : /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. (\uAE30\uC900 \uC7AC\uACE0\uB97C \uBC14\uAFD4\uBCF4\uC138\uC694)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#69768A", marginTop: 6 } }, "\uD45C\uC2DC \uAE30\uC900: ", basisLabel)));
+      ), expandedStk[i.code] && /* @__PURE__ */ React.createElement("div", { style: { padding: "4px 16px 14px 30px", background: "#FAFAFD", borderBottom: "1px solid #F6F7FA" } }, s.lots.length ? /* @__PURE__ */ React.createElement(LotTable, { lots: s.lots, required: null, showSource: basis === "sum", frozenById, searchHighlight: stockQ.trim() }) : /* @__PURE__ */ React.createElement("div", { style: { padding: "8px 0", fontSize: 12.5, color: "#69768A" } }, basisLabel, "\uC5D0 \uB85C\uD2B8 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. (\uAE30\uC900 \uC7AC\uACE0\uB97C \uBC14\uAFD4\uBCF4\uC138\uC694)"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: "#69768A", marginTop: 6 } }, "\uD45C\uC2DC \uAE30\uC900: ", basisLabel)));
     }))), tab === "upload" && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: {
       background: "#FBF3DE",
       border: "1px solid #E0C97A",
@@ -2798,7 +2633,7 @@
     )), canEditStock ? /* @__PURE__ */ React.createElement(ManualStockAddForm, { onAdd: addManualLot }) : /* @__PURE__ */ React.createElement("div", { style: { marginTop: 18, maxWidth: 640 } }, /* @__PURE__ */ React.createElement(LockedNotice, { tier: 1, label: "\uC7AC\uACE0 \uC9C1\uC811 \uCD94\uAC00" })))), poMode === "history" ? /* @__PURE__ */ React.createElement(PurchaseOrderHistory, { records: poHistory, loading: poHistoryLoading, error: poHistoryError, onClose: () => setPoMode(null), onReorder: (record) => {
       setReorder(record);
       setPoMode("order");
-    } }) : poMode && /* @__PURE__ */ React.createElement(PurchaseOrderDialog, { key: poMode + ":" + (reorder?.id || ""), shortages: calc?.totalShort || [], suppliers, itemSuppliers, onSaveSuppliers: persistSuppliers, onCreateOrders: persistPurchaseOrders, onClose: () => setPoMode(null), supplierOnly: poMode === "suppliers", reorder: poMode === "order" ? reorder : null }));
+    } }) : poMode && /* @__PURE__ */ React.createElement(PurchaseOrderDialog, { key: poMode + ":" + (reorder?.id || ""), shortages: calc?.totalShort || [], suppliers, itemSuppliers, freezes, onSaveSuppliers: persistSuppliers, onCreateOrders: persistPurchaseOrders, onClose: () => setPoMode(null), supplierOnly: poMode === "suppliers", reorder: poMode === "order" ? reorder : null }));
   }
   ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
 })();

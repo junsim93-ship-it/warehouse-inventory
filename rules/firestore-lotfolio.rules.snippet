@@ -1,3 +1,4 @@
+// BEGIN LOTFOLIO RULES
 // Insert inside match /databases/{database}/documents in the active ruleset.
 function lotApproved() {
   return approved() && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data
@@ -13,6 +14,59 @@ function lotFields(d) {
     && d.designKey == d.month + 'V_' + d.code + '_' + d.type + '_' + d.reg
     && d.author is string && d.memo is string && d.created is int;
 }
+function lotDesignFields(designKey) {
+  return lotFields(request.resource.data) && request.resource.data.designKey == designKey
+    && request.resource.data.files is list && request.resource.data.revision is string;
+}
+function lotFreezeDetails(event) {
+  return event.reason in ['discontinued','quality','reserved','other']
+    && event.memo is string && event.memo.size() <= 300 && event.memo.matches('[^\\r\\n]*')
+    && event.until is string && (event.until == ''
+      || event.until.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'))
+    && event.by is string && event.by == request.auth.token.get('email', '')
+    && event.by.size() > 0
+    && event.at is int && event.at > 0
+    && event.at >= request.time.toMillis() - 300000
+    && event.at <= request.time.toMillis() + 300000;
+}
+function lotFreezeTransition(before, after, history) {
+  let event = history[0];
+  let fields = ['reason','memo','until','by','at'];
+  return event is map && event.keys().hasOnly(fields.concat(['action']))
+    && lotFreezeDetails(event)
+    && (before == null
+      ? event.action == 'freeze' && after == {
+          'active': true, 'reason': event.reason, 'memo': event.memo,
+          'until': event.until, 'by': event.by, 'at': event.at
+        }
+      : before.active == true && after == null && event.action == 'unfreeze'
+        && event.reason == before.reason && event.until == before.until);
+}
+function lotFreezeWrite() {
+  let oldHistory = resource.data.get('freezeHistory', []);
+  let history = request.resource.data.get('freezeHistory', []);
+  let changed = request.resource.data.diff(resource.data).affectedKeys();
+  return tier2() && changed.hasOnly(['freeze','freezeHistory','revision'])
+    && changed.hasAll(['freeze','freezeHistory','revision'])
+    && oldHistory is list && oldHistory.size() <= 20
+    && history is list && history.size() > 0 && history.size() <= 20
+    && history == [history[0]].concat(oldHistory.size() == 20 ? oldHistory[0:19] : oldHistory)
+    && lotFreezeTransition(resource.data.get('freeze', null), request.resource.data.get('freeze', null), history);
+}
+function lotFreezeHistoryMove(designKey, from) {
+  let previous = /databases/$(database)/documents/lotDesigns/$(from);
+  let old = get(previous).data;
+  return tier2() && from != designKey && old.get('freeze', null) == null
+    && old.freezeHistory is list && old.freezeHistory.size() > 0 && old.freezeHistory.size() <= 20
+    && request.resource.data.freezeHistory == old.freezeHistory && !existsAfter(previous);
+}
+function lotDesignCreateHistory(designKey) {
+  let from = request.resource.data.get('freezeHistoryFrom', '');
+  return (!request.resource.data.keys().hasAny(['freezeHistoryFrom'])
+      && request.resource.data.get('freezeHistory', []) == [])
+    || (from is string && from.matches('[0-9]{4}V_[A-Z0-9-]+_[ABC]_(KR|N|M|C|NM|NC|MC|NMC)')
+      && lotFreezeHistoryMove(designKey, from));
+}
 match /lotProducts/{code} {
   allow read, delete: if lotApproved();
   allow create, update: if lotApproved() && request.resource.data.code == code
@@ -21,10 +75,15 @@ match /lotProducts/{code} {
     && request.resource.data.created is int && request.resource.data.revision is int;
 }
 match /lotDesigns/{designKey} {
-  allow read, delete: if lotApproved();
-  allow create, update: if lotApproved() && lotFields(request.resource.data)
-    && request.resource.data.designKey == designKey && request.resource.data.files is list
-    && request.resource.data.revision is string;
+  allow read: if lotApproved();
+  allow delete: if lotApproved() && resource.data.get('freeze', null) == null
+    && (resource.data.get('freezeHistory', []).size() == 0 || tier2());
+  allow create: if lotApproved() && lotDesignFields(designKey)
+    && request.resource.data.get('freeze', null) == null
+    && lotDesignCreateHistory(designKey);
+  allow update: if lotApproved() && lotDesignFields(designKey)
+    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['freeze','freezeHistory','freezeHistoryFrom'])
+      || lotFreezeWrite());
 }
 match /lotRecords/{id} {
   allow read, delete: if lotApproved();
@@ -33,3 +92,4 @@ match /lotRecords/{id} {
     && request.resource.data.lot == request.resource.data.month + 'V' + request.resource.data.seq
       + '_' + request.resource.data.code + '_' + request.resource.data.type + '_' + request.resource.data.reg;
 }
+// END LOTFOLIO RULES

@@ -5,6 +5,7 @@ import {
   FileText,
   Image as ImageIcon,
   Link2,
+  Lock,
   Maximize2,
   Pencil,
   Plus,
@@ -18,6 +19,8 @@ import { buildLot, currentMonth, parseLot } from './lot-engine.mjs';
 import { fileKinds, fileMime, newId } from './attachments.mjs';
 import { PdfReader } from './PdfReader.jsx';
 import { FileDownload } from './file-access.jsx';
+import { DesignFreezeControls } from './DesignFreeze.jsx';
+import { freezeReason } from './design-freeze.mjs';
 import {
   useApp,
   Art,
@@ -47,12 +50,15 @@ export function Designs() {
   const [q, setQuery] = useState(''),
     [t, setType] = useState('');
   const [r, setReg] = useState(''),
-    [m, setMonth] = useState('');
+    [m, setMonth] = useState(''),
+    [status, setStatus] = useState('');
+  const frozenCount = state.designs.filter((design) => design.freeze?.active === true).length;
   const rows = state.designs.filter(
     (d) =>
       (!t || d.type === t) &&
       (!r || d.reg.includes(r)) &&
       (!m || d.month === inputMonth(m)) &&
+      (!status || (d.freeze?.active === true) === (status === 'frozen')) &&
       [d.key, nameOf(state.products, d.code), d.memo]
         .join(' ')
         .toLowerCase()
@@ -77,14 +83,21 @@ export function Designs() {
           month={m}
           setMonth={setMonth}
           placeholder="디자인 키, 제품명, 메모 검색"
-        />
+        >
+          <select aria-label="디자인 동결 상태 필터" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">전체</option>
+            <option value="normal">정상</option>
+            <option value="frozen">동결 중 ({frozenCount})</option>
+          </select>
+        </Filters>
         <span>{rows.length}개 디자인</span>
       </div>
       <div className="gallery">
         {rows.map((design) => {
           const files = state.files.filter((f) => f.design === design.id);
+          const frozen = design.freeze?.active === true;
           return (
-            <button key={design.id} className="design-card" onClick={() => open('viewer', { id: design.id })}>
+            <button key={design.id} className={frozen ? 'design-card is-frozen' : 'design-card'} onClick={() => open('viewer', { id: design.id })}>
               <Art design={design} />
               <div className="design-info">
                 <div className="card-meta">
@@ -93,6 +106,7 @@ export function Designs() {
                 </div>
                 <h3>{nameOf(state.products, design.code)}</h3>
                 <code>{design.key}</code>
+                {frozen && <span className="freeze-badge"><Lock size={13} /> 동결 · {freezeReason(design.freeze.reason)}</span>}
                 <div className="card-bottom">
                   <span>{regName(design.reg)}</span>
                   <div>
@@ -278,7 +292,7 @@ function RegisteredPreview({ design }) {
 }
 
 export function DesignViewer({ id, parsed }) {
-  const { state, store, open, close, notify, useDesign } = useApp();
+  const { state, store, open, close, notify, useDesign, tier } = useApp();
   const design = state.designs.find((d) => d.id === id);
   const [otherId, compare] = useState(''),
     [busy, setBusy] = useState(false);
@@ -294,6 +308,7 @@ export function DesignViewer({ id, parsed }) {
     .sort((a, b) => b.month.localeCompare(a.month));
   const other = versions.find((d) => d.id === otherId);
   const orders = state.lots.filter((l) => l.key === design.key);
+  const canDelete = !design.freeze?.active && (tier === 2 || !design.freezeHistory?.length);
   async function remove() {
     if (busy || !confirm('디자인과 첨부파일을 삭제할까요? 발주 이력은 보관됩니다.')) return;
     setBusy(true);
@@ -320,6 +335,7 @@ export function DesignViewer({ id, parsed }) {
       wide
     >
       <div className="modal-body">
+        <DesignFreezeControls design={design} showHistory />
         <div className="detail-heading">
           <div>
             <TypeBadge type={design.type} />
@@ -417,7 +433,7 @@ export function DesignViewer({ id, parsed }) {
           </div>
         </div>
         <div className="modal-actions">
-          <button className="btn danger" disabled={busy} onClick={remove}>
+          <button className="btn danger" disabled={busy || !canDelete} onClick={remove}>
             <Trash2 size={15} />
             삭제
           </button>
@@ -432,7 +448,7 @@ export function DesignViewer({ id, parsed }) {
 }
 
 export function DesignEditor({ id, initial }) {
-  const { state, store, open, close, notify, user } = useApp();
+  const { state, store, open, close, notify, user, tier } = useApp();
   // Freeze the base revision and attachments together for optimistic concurrency checks.
   const [original] = useState(() => state.designs.find((d) => d.id === id));
   const [files, setFiles] = useState(() => state.files.filter((f) => f.design === id));
@@ -498,6 +514,8 @@ export function DesignEditor({ id, initial }) {
     try {
       if (id && !original) throw Error('수정할 디자인을 찾을 수 없습니다.');
       const obj = buildLot({ ...form, seq: '' });
+      if (renamed && original.freezeHistory?.length && tier !== 2)
+        throw Error('동결 이력이 있는 디자인의 키는 2단계 관리자만 변경할 수 있습니다.');
       const result = await store.saveDesign({
         ...obj,
         id,

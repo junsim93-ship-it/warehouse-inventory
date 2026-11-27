@@ -18,6 +18,7 @@ import {
   NotebookPen,
 } from 'lucide-react';
 import { DesignPreview } from './Designs.jsx';
+import { FreezeBanner } from './DesignFreeze.jsx';
 import { buildLot, nextSeq, types, currentMonth } from './lot-engine.mjs';
 import {
   useApp,
@@ -87,6 +88,7 @@ export function Generator({ form, setForm, onConfirm }) {
   }
   async function save() {
     if (busy || !result) return;
+    if (design?.freeze?.active && !confirm('동결된 디자인의 로트입니다. 그래도 발주 이력에 저장할까요?')) return;
     setBusy(true);
     try {
       let confirmed = false;
@@ -206,7 +208,7 @@ export function Generator({ form, setForm, onConfirm }) {
                     <option value="">등록된 디자인 불러오기</option>
                     {related.map((d) => (
                       <option key={d.key} value={d.month}>
-                        {monthText(d.month)} · {d.key}
+                        {d.freeze?.active && '[동결] '}{monthText(d.month)} · {d.key}
                       </option>
                     ))}
                   </select>
@@ -268,6 +270,7 @@ export function Generator({ form, setForm, onConfirm }) {
                 <small className="lot-result-hint">제품을 선택하거나 고유번호를 입력해 주세요.</small>
               )}
             </div>
+            <FreezeBanner freeze={design?.freeze} compact />
             <div className="result-actions">
               <button disabled={!result} onClick={copy}>
                 <Copy size={15} />
@@ -297,6 +300,7 @@ export function Generator({ form, setForm, onConfirm }) {
                 <Badge>미등록</Badge>
               )}
             </SectionTitle>
+            <FreezeBanner freeze={design?.freeze} compact />
             {design && onConfirm ? (
               <div className="popup-proof">
                 <DesignPreview design={design} />

@@ -1,6 +1,7 @@
 import {buildLot, productCode} from './lot-engine.mjs';
 import {fileMime, newId} from './attachments.mjs';
 import {fileCipher, openFile, sealFile} from './file-crypto.mjs';
+import {buildFreezeChange} from './design-freeze.mjs';
 
 const empty = () => ({products:[], designs:[], lots:[], files:[]});
 const clean = value => String(value ?? '').trim();
@@ -138,6 +139,8 @@ export function createLotfolioStore(app, options={}) {
       if (!snap.exists) throw missing();
       oldData = snap.data();
       if (form.original && form.original.revision !== oldData.revision) throw changed();
+      if (oldKey !== key && oldData.freeze?.active)
+        throw Error('동결을 해제한 뒤 디자인 키를 변경해 주세요.');
       previousFiles = oldData.files;
     }
     if ((!oldKey || oldKey !== key) && (await target.get({source:'server'})).exists)
@@ -171,6 +174,11 @@ export function createLotfolioStore(app, options={}) {
       for (const file of nextFiles) file.primary = file === primary;
       const payload = {designKey:key,month:parsed.month,code:parsed.code,type:parsed.type,reg:parsed.reg,
         author:clean(form.author),memo:clean(form.memo),created:oldData?.created ?? Date.now(),revision,files:nextFiles};
+      if (oldKey !== key && oldData?.freezeHistory?.length) {
+        payload.freeze = null;
+        payload.freezeHistory = oldData.freezeHistory;
+        payload.freezeHistoryFrom = oldKey;
+      }
       commitAttempted = true;
       await transaction(async tx=>{
         const old = source && await tx.get(source);
@@ -178,7 +186,9 @@ export function createLotfolioStore(app, options={}) {
         if ((!source || oldKey !== key) && (await tx.get(target)).exists)
           throw conflict('같은 디자인 키가 이미 등록되어 있습니다.',{existingId:key});
         if (source && oldKey!==key) tx.delete(source);
-        active(); tx.set(target,payload);
+        active();
+        if (oldKey === key) tx.update(target,payload);
+        else tx.set(target,payload);
       });
     } catch(error) {
       // An ambiguous transport failure must never delete blobs of a committed snapshot.
@@ -202,9 +212,23 @@ export function createLotfolioStore(app, options={}) {
       const doc = await tx.get(ref);
       if (!doc.exists) throw missing();
       if (doc.data().revision !== design.revision) throw changed();
+      if (doc.data().freeze?.active) throw Error('동결을 해제한 뒤 디자인을 삭제해 주세요.');
       active(); tx.delete(ref); return doc.data().files;
     });
     return {pendingCleanup:await removeFiles(files,design.id)};
+  }
+  async function setDesignFreeze(design, action, input) {
+    const user = auth.currentUser;
+    if (!user?.email) throw Error('관리자 이메일을 확인할 수 없습니다.');
+    const ref = db.collection('lotDesigns').doc(design.id);
+    await transaction(async tx => {
+      const doc = await tx.get(ref);
+      if (!doc.exists) throw missing();
+      if (doc.data().revision !== design.revision) throw changed();
+      const change = buildFreezeChange(doc.data(), action, input, user.email);
+      active();
+      tx.update(ref, {...change, revision:newId()});
+    });
   }
   async function saveProduct(input, {create=false,original}={}) {
     const row = trimProduct(input), ref = db.collection('lotProducts').doc(row.code);
@@ -280,5 +304,5 @@ export function createLotfolioStore(app, options={}) {
     scope.abort();
     for (const stop of stops) stop();
   }
-  return {subscribe,saveDesign,deleteDesign,getFileBlob,saveProduct,deleteProduct,importProducts,saveLot,deleteLot,dispose};
+  return {subscribe,saveDesign,deleteDesign,setDesignFreeze,getFileBlob,saveProduct,deleteProduct,importProducts,saveLot,deleteLot,dispose};
 }
