@@ -1,0 +1,12 @@
+{
+  "firestore": { "rules": ".firebase/lotfolio/combined.rules" },
+  "storage": { "rules": "storage.rules" },
+  "emulators": {
+    "firestore": { "host": "127.0.0.1", "port": 8787 },
+    "storage": { "host": "127.0.0.1", "port": 9297 },
+    "auth": { "host": "127.0.0.1", "port": 9097 },
+    "hub": { "host": "127.0.0.1", "port": 4487 },
+    "logging": { "host": "127.0.0.1", "port": 4587 },
+    "ui": { "enabled": false }
+  }
+}

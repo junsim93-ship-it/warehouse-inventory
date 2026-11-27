@@ -1,0 +1,35 @@
+// Insert inside match /databases/{database}/documents in the active ruleset.
+function lotApproved() {
+  return approved() && get(/databases/$(database)/documents/roles/$(request.auth.uid)).data
+    .get('sessionValidAfter', 0) <= request.auth.token.auth_time;
+}
+function lotCode(code) {
+  return code is string && code.matches('[A-Z0-9-]+');
+}
+function lotFields(d) {
+  return lotCode(d.code) && d.type in ['A','B','C']
+    && d.month.matches('[0-9]{2}(0[1-9]|1[012])')
+    && d.reg in ['KR','N','M','C','NM','NC','MC','NMC']
+    && d.designKey == d.month + 'V_' + d.code + '_' + d.type + '_' + d.reg
+    && d.author is string && d.memo is string && d.created is int;
+}
+match /lotProducts/{code} {
+  allow read, delete: if lotApproved();
+  allow create, update: if lotApproved() && request.resource.data.code == code
+    && lotCode(code) && request.resource.data.name is string && request.resource.data.name.size() > 0
+    && request.resource.data.brand is string && request.resource.data.memo is string
+    && request.resource.data.created is int && request.resource.data.revision is int;
+}
+match /lotDesigns/{designKey} {
+  allow read, delete: if lotApproved();
+  allow create, update: if lotApproved() && lotFields(request.resource.data)
+    && request.resource.data.designKey == designKey && request.resource.data.files is list
+    && request.resource.data.revision is string;
+}
+match /lotRecords/{id} {
+  allow read, delete: if lotApproved();
+  allow create: if lotApproved() && lotFields(request.resource.data)
+    && request.resource.data.seq.matches('(|0[1-9]|[1-9][0-9]+)')
+    && request.resource.data.lot == request.resource.data.month + 'V' + request.resource.data.seq
+      + '_' + request.resource.data.code + '_' + request.resource.data.type + '_' + request.resource.data.reg;
+}
