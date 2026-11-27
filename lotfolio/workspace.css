@@ -33,8 +33,14 @@
 .side-foot > button {
   flex: none;
 }
+.framed-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+}
 .frame-content {
-  height: calc(100dvh - 68px);
+  min-width: 0;
+  overflow: clip;
   background: white;
 }
 .legacy-pane,
@@ -200,9 +206,6 @@
   border-radius: 7px;
 }
 @media (max-width: 760px) {
-  .frame-content {
-    height: calc(100dvh - 55px);
-  }
   .lookup-columns {
     grid-template-columns: 1fr;
   }

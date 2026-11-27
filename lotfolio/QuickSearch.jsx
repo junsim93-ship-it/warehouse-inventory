@@ -39,12 +39,16 @@ export function QuickSearch({ inputRef }) {
   }
   function choose() {
     if (parsed) show('lookup', { parsed });
-    else if (products.length) show('productLookup', { product: products[0] });
+    else if (dataReady && products.length) show('productLookup', { product: products[0] });
   }
   return (
-    <div
+    <form
       className="quick-wrap"
       ref={container}
+      onSubmit={(e) => {
+        e.preventDefault();
+        choose();
+      }}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setActive(false);
       }}
@@ -67,10 +71,6 @@ export function QuickSearch({ inputRef }) {
               setActive(false);
               inputRef.current.blur();
             }
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              choose();
-            }
           }}
           onPaste={(e) => {
             const field = e.currentTarget,
@@ -90,6 +90,7 @@ export function QuickSearch({ inputRef }) {
         />
         {query ? (
           <button
+            type="button"
             className="iconbtn"
             aria-label="검색 지우기"
             onClick={() => {
@@ -106,7 +107,7 @@ export function QuickSearch({ inputRef }) {
       {active && term && (
         <div className="lookup-menu">
           {parsed ? (
-            <button onClick={choose}>
+            <button type="submit">
               <span>
                 로트 · 디자인 통합 조회<code>{parsed.lot}</code>
               </span>
@@ -118,7 +119,7 @@ export function QuickSearch({ inputRef }) {
             <p role="status">{dataError || '제품 목록을 확인하는 중…'}</p>
           ) : products.length ? (
             products.map((p) => (
-              <button key={p.code} onClick={() => show('productLookup', { product: p })}>
+              <button type="button" key={p.code} onClick={() => show('productLookup', { product: p })}>
                 <span>
                   {p.name}
                   <code>{p.code}</code>
@@ -131,6 +132,6 @@ export function QuickSearch({ inputRef }) {
           )}
         </div>
       )}
-    </div>
+    </form>
   );
 }

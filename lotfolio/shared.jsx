@@ -120,23 +120,29 @@ export function Field({ name, extra, children }) {
     </div>
   );
 }
-export function ProductPicker({ value, onChange }) {
+export function ProductPicker({ value, onChange, onDraftStatus }) {
   const { state } = useApp(),
     selected = state.products.find((p) => p.code === value);
   const [open, setOpen] = useState(false),
     [term, setTerm] = useState('');
-  const matches = state.products.filter((p) =>
-    (p.code + ' ' + p.name + ' ' + p.brand).toLowerCase().includes(term.toLowerCase()),
-  );
+  const draftCode = term.trim().toUpperCase();
+  const canUseDraftCode = /^[A-Z0-9-]+$/.test(draftCode);
+  const matchesTerm = (p, text) =>
+    (p.code + ' ' + p.name + ' ' + p.brand).toLowerCase().includes(text.toLowerCase());
+  const matches = state.products.filter((p) => matchesTerm(p, term));
+  function close() {
+    setOpen(false);
+    onDraftStatus?.('');
+  }
   function select(code) {
     onChange(code);
-    setOpen(false);
+    close();
   }
   return (
     <div
       className="product-picker"
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+        if (!e.currentTarget.contains(e.relatedTarget)) close();
       }}
     >
       <div className={'picker-trigger ' + (open ? 'focus' : '')}>
@@ -161,13 +167,20 @@ export function ProductPicker({ value, onChange }) {
           onChange={(e) => {
             const t = e.target.value;
             setTerm(t);
-            if (/^[a-z0-9-]*$/i.test(t)) onChange(t.toUpperCase());
+            const code = t.trim();
+            if (/^[a-z0-9-]*$/i.test(code)) {
+              onChange(code.toUpperCase());
+              onDraftStatus?.('');
+            } else {
+              onDraftStatus?.(state.products.some((p) => matchesTerm(p, t)) ? 'searching' : 'invalid');
+            }
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setOpen(false);
+            if (e.nativeEvent.isComposing) return;
+            if (e.key === 'Escape') close();
             if (e.key === 'Enter') {
               e.preventDefault();
-              if (/^[a-z0-9-]+$/i.test(term)) select(term.toUpperCase());
+              if (canUseDraftCode) select(draftCode);
               else if (matches[0]) select(matches[0].code);
             }
           }}
@@ -183,14 +196,13 @@ export function ProductPicker({ value, onChange }) {
               {p.code === value && <Check size={14} />}
             </button>
           ))}
-          {term &&
-            /^[a-z0-9-]+$/i.test(term) &&
-            !state.products.some((p) => p.code === term.toUpperCase()) && (
-              <button type="button" onClick={() => select(term.toUpperCase())}>
-                <code>{term.toUpperCase()}</code>미등록 번호로 사용
+          {canUseDraftCode &&
+            !state.products.some((p) => p.code === draftCode) && (
+              <button type="button" onClick={() => select(draftCode)}>
+                <code>{draftCode}</code>미등록 번호로 사용
               </button>
             )}
-          {!matches.length && !/^[a-z0-9-]+$/i.test(term) && (
+          {!matches.length && !canUseDraftCode && (
             <p>제품명이나 영문·숫자 번호를 입력해 주세요.</p>
           )}
         </div>

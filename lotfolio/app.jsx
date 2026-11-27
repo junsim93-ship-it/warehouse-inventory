@@ -220,7 +220,6 @@ function Workspace({ user, tier }) {
     search = useRef(null),
     drawerBtn = useRef(null),
     pending = useRef(null);
-  const formInitialized = useRef(false);
   useEffect(() => {
     let alive = true;
     setDataReady(false);
@@ -253,11 +252,6 @@ function Workspace({ user, tier }) {
     },
     [store],
   );
-  useEffect(() => {
-    if (formInitialized.current || !state.products.length) return;
-    formInitialized.current = true;
-    setForm((old) => (old.code ? old : { ...old, code: state.products[0].code }));
-  }, [state.products]);
   const notify = useCallback((text) => {
     setToast(text);
     clearTimeout(toastTimer.current);
@@ -452,7 +446,7 @@ function Workspace({ user, tier }) {
             </button>
           </div>
         </aside>
-        <div className="workspace">
+        <div className={'workspace' + (legacy ? ' framed-workspace' : '')}>
           <header className="topbar">
             <button
               ref={drawerBtn}

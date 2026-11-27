@@ -47,22 +47,27 @@ export function initialLotForm(user, seed = {}) {
     omit: false,
     code: '',
     type: 'B',
-    reg: 'KR',
     memo: '',
     author: user?.email || '',
     ...seed,
+    reg: seed.reg || 'KR',
   };
 }
 export function Generator({ form, setForm, onConfirm }) {
   const { state, open, notify, store } = useApp(),
     [notes, setNotes] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [productDraft, setProductDraft] = useState('');
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   let result, error;
-  try {
-    result = buildLot({ ...form, seq: form.omit ? '' : form.seq });
-  } catch (e) {
-    error = e.message;
+  if (productDraft === 'invalid') {
+    error = '제품번호는 영문, 숫자, 하이픈으로 입력해 주세요.';
+  } else if (!productDraft && form.code.trim()) {
+    try {
+      result = buildLot({ ...form, seq: form.omit ? '' : form.seq });
+    } catch (e) {
+      error = e.message;
+    }
   }
   const design = state.designs.find((d) => d.key === result?.key),
     p = state.products.find((p) => p.code === form.code);
@@ -129,6 +134,7 @@ export function Generator({ form, setForm, onConfirm }) {
             <Field
               name="제품"
               extra={
+                !productDraft &&
                 !p &&
                 form.code && (
                   <button
@@ -141,7 +147,11 @@ export function Generator({ form, setForm, onConfirm }) {
                 )
               }
             >
-              <ProductPicker value={form.code} onChange={(v) => set('code', v)} />
+              <ProductPicker
+                value={form.code}
+                onChange={(v) => set('code', v)}
+                onDraftStatus={setProductDraft}
+              />
             </Field>
             <Field name="부자재 구분">
               <TypePicker value={form.type} onChange={(v) => set('type', v)} />
@@ -250,7 +260,13 @@ export function Generator({ form, setForm, onConfirm }) {
               {existing && <span className="duplicate">중복 코드</span>}
             </div>
             <div className="lot-result" aria-live="polite">
-              {result ? result.lot : <small>{error}</small>}
+              {result ? (
+                result.lot
+              ) : error ? (
+                <small>{error}</small>
+              ) : (
+                <small className="lot-result-hint">제품을 선택하거나 고유번호를 입력해 주세요.</small>
+              )}
             </div>
             <div className="result-actions">
               <button disabled={!result} onClick={copy}>

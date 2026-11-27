@@ -231,6 +231,10 @@ small {
   font-size: 14px;
   font-weight: 570;
   border-radius: 7px;
+  white-space: nowrap;
+}
+.sidebar nav a svg {
+  flex: none;
 }
 .sidebar nav a:hover {
   background: #f0f1f7;
@@ -768,6 +772,10 @@ small {
     13px Pretendard,
     sans-serif;
   color: #ffd3d6;
+}
+.lot-result .lot-result-hint {
+  color: #d2d7ec;
+  letter-spacing: normal;
 }
 .result-actions button {
   display: inline-flex;
@@ -1445,7 +1453,14 @@ tr:last-child td {
 }
 @media (max-width: 1200px) {
   :root {
-    --side: 185px;
+    --side: 194px;
+  }
+  .sidebar nav {
+    padding-inline: 10px;
+  }
+  .sidebar nav a {
+    gap: 8px;
+    padding-inline: 10px;
   }
   .content {
     padding: 25px 24px 40px;
@@ -1490,7 +1505,7 @@ tr:last-child td {
 }
 @media (max-width: 1000px) and (min-width: 761px) {
   :root {
-    --side: 164px;
+    --side: 178px;
   }
   .brand-link {
     margin-left: 18px;
@@ -1498,9 +1513,6 @@ tr:last-child td {
   .workspace-name {
     padding: 8px;
     font-size: 12px;
-  }
-  .sidebar nav a {
-    padding-left: 8px;
   }
   .content {
     padding: 23px 17px;
@@ -1758,9 +1770,6 @@ tr:last-child td {
   .import-table table {
     min-width: 450px;
   }
-  .history td:nth-child(2) {
-    white-space: nowrap;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -1861,19 +1870,45 @@ tr:last-child td {
 .key-change code {
   overflow-wrap: anywhere;
 }
-.order-memo {
-  min-width: 84px;
-  max-width: 260px;
+.history td {
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
-.order-author {
-  min-width: 56px;
-  max-width: 110px;
+.history .rowlink.code {
+  display: inline-block;
+  text-align: left;
+  white-space: normal;
   overflow-wrap: anywhere;
+}
+.history .order-memo {
+  white-space: pre-wrap;
 }
 .history table {
   min-width: 820px;
+  table-layout: fixed;
+}
+.history :is(th, td) {
+  padding-inline: 9px;
+}
+.history th:first-child {
+  width: 23%;
+}
+.history th:nth-child(3) {
+  width: 76px;
+}
+.history th:nth-child(4) {
+  width: 56px;
+}
+.history th:nth-child(5) {
+  width: 16%;
+}
+.history th:nth-child(6) {
+  width: 15%;
+}
+.history th:nth-child(7) {
+  width: 92px;
+}
+.history th:last-child {
+  width: 82px;
 }
 .pdf-reader {
   margin: 9px 0;
@@ -1939,10 +1974,6 @@ tr:last-child td {
   }
   .pdf-control span {
     min-width: 34px;
-  }
-  .history td {
-    padding-left: 9px;
-    padding-right: 9px;
   }
 }
 
