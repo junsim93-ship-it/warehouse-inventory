@@ -10,6 +10,7 @@
   <style>
     *, *::before, *::after {box-sizing:border-box; margin:0; padding:0;}
     body {min-height:100vh;}
+    .calculator-loading {padding:24px;color:#50596c;font:14px/1.5 system-ui,sans-serif;}
     img {max-width:100%;}
     [hidden]:not([hidden=until-found]) {display:none!important;}
     ::-webkit-scrollbar {width:6px; height:6px;}
@@ -18,23 +19,11 @@
     input[type=number]::-webkit-inner-spin-button {-webkit-appearance:none;}
     @keyframes toastIn {from {opacity:0;transform:translateY(8px);} to {opacity:1; transform:translateY(0);}}
   </style>
-  <script src="/assets/unified-session.js" integrity="sha384-QtHuT3CBeghSpOsauv9bY/XnQ20ZZe9LZgRXMcw1KsTRcxXPEoytn7WGxuimuch8" crossorigin="anonymous"></script>
-  <script src="/assets/lot-engine.js" integrity="sha384-laHUY2ddOmwx2L/jvff04r//TfTaw/YgtXqM+f4Cka5MJKFAcuUpqN3vivh8WgKl" crossorigin="anonymous"></script>
-  <script src="/assets/lotfolio-frame.js" integrity="sha384-3f4Dt27E2jo7U8wrZkfA6nuflUIQI8dQwfKHyTW8M3bH6amc/nyrxIGvyleVZjYL" crossorigin="anonymous"></script>
+  <script defer src="/assets/firebase-sdk-62ce5ef2d3c2f82f.js" integrity="sha384-jZZDTUkc0L8p/ccURi7ztFCDDYqbxRzE99dQ4g8dcNTYpcsW9/gEhlgW2z5aXooZ" crossorigin="anonymous"></script>
+  <script defer src="/assets/security-client.js" integrity="sha384-pNdio8VWflw2W708NPhhnmqyAgLC9zKkegEvA2UNsrmIUZh3gezmhPyrmXuteHHt" crossorigin="anonymous"></script>
+  <script defer src="/assets/calculator-runtime-48d3ae8f047399b2.js" integrity="sha384-q0cR96OK1RBwe04miYc1jTes7xBZonr2pJDaa/EQXxHFuugZ4YybioLN5BcrdIKb" crossorigin="anonymous"></script>
 </head>
 <body class="calculator-frame">
-  <div id="root"></div>
-  <script src="/vendor/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
-  <script src="/vendor/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
-  <script src="/vendor/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
-  <script src="/vendor/firebase-app-compat.js" integrity="sha384-aUtWR1iCiOCHS8pn1nKNXMZm3I/eDrV63IXWXgE+mHHqJfYTWYV+jGk0sCXz57+U" crossorigin="anonymous"></script>
-  <script src="/vendor/firebase-firestore-compat.js" integrity="sha384-jxdN9nS+cvQavyzo/bNcMoHfxvk0kWtPAfPDRq3EQ/wvbCVLNheaVIphKWMD4/g0" crossorigin="anonymous"></script>
-  <script src="/vendor/firebase-auth-compat.js" integrity="sha384-ZRqyA8Xkw0A6FmVya9A0Werzt9yjKKAp2TCzqVJjHK1O3oyb0z9jMxpkWPVoFtUm" crossorigin="anonymous"></script>
-  <script src="/vendor/firebase-functions-compat.js" integrity="sha384-c4zDGykM7t9cW/0muJ69shtBRJf2JonnZiwcsZVsrWCCwKwpb2buU+tX/RKzD4+I" crossorigin="anonymous"></script>
-  <script src="/assets/security-client.js" integrity="sha384-pNdio8VWflw2W708NPhhnmqyAgLC9zKkegEvA2UNsrmIUZh3gezmhPyrmXuteHHt" crossorigin="anonymous"></script>
-  <script src="/assets/workbook-client.js" integrity="sha384-s6CDtnjXWOnQ4p1mQXsdsm15P2mrmDNSDXFJTLzBrg//yVM2m9u+Ky9kwlCblDj8" crossorigin="anonymous"></script>
-  <script src="/assets/purchase-order.js" integrity="sha384-YUkN6rFWEtYABbJL02CW5ieBo5nIb3LR9aT7KNK/xwU6JIFtmR7YZiwu4QFNy/T6" crossorigin="anonymous"></script>
-  <script src="/assets/calculation-state.js" integrity="sha384-rQjvls2mEZJ00tsURvzBpQKEpJCDS0ltZGr92TYQ33cKwxICrhmyVvvizdKJkn8g" crossorigin="anonymous"></script>
-  <script src="/assets/calculator.js" integrity="sha384-hkoDSzBstskRQU6lIHgxmyRP8IcoEHZlqKFbBsvPiGgwlRwJaEbjvp7vb7iNwKcb" crossorigin="anonymous"></script>
+  <div id="root"><p role="status" class="calculator-loading">계산기를 여는 중…</p></div>
 </body>
 </html>

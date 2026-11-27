@@ -186,6 +186,10 @@
     background: "#fff",
     outline: "none"
   };
+  async function readCalculatorWorkbook(buffer) {
+    const [book] = await Promise.all([readWorkbookSafely(buffer), window.XLSX || LotfolioSheets.loadSpreadsheet()]);
+    return book;
+  }
   async function downloadFile({ filename, data }) {
     const blob = data instanceof Blob ? data : new Blob([data], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob), link = document.createElement("a");
@@ -689,7 +693,7 @@
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
-          const wb = await readWorkbookSafely(ev.target.result);
+          const wb = await readCalculatorWorkbook(ev.target.result);
           const { lots, meta } = parseStockWorkbook(wb);
           await onLoaded({ fileName: file.name, date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace("T", " "), lots, meta });
         } catch (ex) {
@@ -1899,6 +1903,7 @@
       try {
         const now = /* @__PURE__ */ new Date();
         const stamp = now.toISOString().slice(0, 16).replace("T", " ");
+        const XLSX = window.XLSX || await LotfolioSheets.loadSpreadsheet();
         const wb = XLSX.utils.book_new();
         const summaryRows = [
           ["\uBD80\uC790\uC7AC \uC18C\uC694\uB7C9 \xB7 \uD658\uC0B0\uC7AC\uACE0 \uACC4\uC0B0 \uACB0\uACFC"],
@@ -2124,7 +2129,7 @@
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
-          const wb = await readWorkbookSafely(ev.target.result);
+          const wb = await readCalculatorWorkbook(ev.target.result);
           const parsed = parseWorkOrderWorkbook(wb);
           const lines = parsed.map((p, idx) => {
             const { bom, score } = matchBomByName(p.rawName, boms);
@@ -2172,7 +2177,7 @@
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
-          const wb = await readWorkbookSafely(ev.target.result);
+          const wb = await readCalculatorWorkbook(ev.target.result);
           let json = null;
           for (const name of wb.SheetNames) {
             const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: "" });

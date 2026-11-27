@@ -37,7 +37,7 @@
         ]
       },
       {
-        "regex": "^[/\\\\]assets[/\\\\]app-[A-Z0-9]+\\.(css|js)$",
+        "regex": "^[/\\\\]assets[/\\\\](app-[A-Z0-9]+\\.(css|js)|(firebase-sdk|calculator-runtime)-[a-f0-9]{16}\\.js)$",
         "headers": [
           {
             "key": "Cache-Control",

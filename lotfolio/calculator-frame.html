@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://firebasestorage.googleapis.com; connect-src 'self' blob: https://firebasestorage.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://asia-northeast3-warehouse-inventory-84fef.cloudfunctions.net; frame-src 'self' https://warehouse-inventory-84fef.firebaseapp.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="theme-color" content="#f6f7fa">
+  <title>부자재 계산 · 발주 | Lotfolio</title>
+  <link rel="stylesheet" href="/assets/lotfolio-frame.css">
+  <style>
+    *, *::before, *::after {box-sizing:border-box; margin:0; padding:0;}
+    body {min-height:100vh;}
+    .calculator-loading {padding:24px;color:#50596c;font:14px/1.5 system-ui,sans-serif;}
+    img {max-width:100%;}
+    [hidden]:not([hidden=until-found]) {display:none!important;}
+    ::-webkit-scrollbar {width:6px; height:6px;}
+    ::-webkit-scrollbar-track {background:transparent;}
+    ::-webkit-scrollbar-thumb {background:#c3c8d3; border-radius:4px;}
+    input[type=number]::-webkit-inner-spin-button {-webkit-appearance:none;}
+    @keyframes toastIn {from {opacity:0;transform:translateY(8px);} to {opacity:1; transform:translateY(0);}}
+  </style>
+  <!-- calculator scripts -->
+</head>
+<body class="calculator-frame">
+  <div id="root"><p role="status" class="calculator-loading">계산기를 여는 중…</p></div>
+</body>
+</html>

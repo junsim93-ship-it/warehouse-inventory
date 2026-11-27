@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import { Milk, Box, Tag, Check, Image as ImageIcon, X, Search, ChevronDown, File } from 'lucide-react';
 import { types, regulations, productCode } from './lot-engine.mjs';
+import { loadSpreadsheet as spreadsheet } from './spreadsheet.mjs';
+export { spreadsheet };
 export const Ctx = React.createContext(null);
 export const useApp = () => useContext(Ctx);
 export const typeIcons = { A: Milk, B: Box, C: Tag };
@@ -398,10 +400,6 @@ export function Filters({
       )}
     </div>
   );
-}
-export async function spreadsheet() {
-  if (!window.XLSX) throw Error('엑셀 도구를 불러올 수 없습니다. 페이지를 새로고침해 주세요.');
-  return window.XLSX;
 }
 export async function exportSheet(rows, title, filename) {
   const x = await spreadsheet(),

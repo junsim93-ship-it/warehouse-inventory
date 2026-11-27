@@ -163,6 +163,26 @@ function FramedPage({ show, frameRef, slug, title }) {
     </section>
   );
 }
+
+// Warm only the code. Opening the calculator is what starts its inventory subscriptions.
+function useCalculatorPrefetch() {
+  useEffect(() => {
+    const url = document.querySelector('meta[name="calculator-runtime"]')?.content;
+    if (!url || readPage() === '/calculator' || navigator.connection?.saveData) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'script';
+    link.crossOrigin = 'anonymous';
+    link.href = url;
+    const warm = () => document.head.append(link);
+    const idle = typeof window.requestIdleCallback === 'function';
+    const id = idle ? window.requestIdleCallback(warm, {timeout: 2000}) : setTimeout(warm, 300);
+    return () => {
+      if (idle) window.cancelIdleCallback(id); else clearTimeout(id);
+      link.remove();
+    };
+  }, []);
+}
 function GeneratorPopup({ user, seed, confirm, close, applyDesign }) {
   const [form, setForm] = useState(() => initialLotForm(user, seed));
   useEffect(() => {
@@ -181,6 +201,7 @@ function GeneratorPopup({ user, seed, confirm, close, applyDesign }) {
 }
 
 function Workspace({ user, tier }) {
+  useCalculatorPrefetch();
   const [page, setPage] = useState(readPage),
     [mobile, setMobile] = useState(false);
   const [store] = useState(() => createLotfolioStore(app, storeOptions));

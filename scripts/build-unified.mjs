@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, copyFile, cp } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { buildCalculatorAssets, removeSupersededBundles } from './calculator-assets.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(repo);
@@ -71,16 +72,8 @@ if (!process.argv.includes('--engine-only')) {
     createHash('sha384')
       .update(await readFile(site + '/' + file))
       .digest('base64');
-  const scripts = [
-    'vendor/firebase-app-compat.js',
-    'vendor/firebase-auth-compat.js',
-    'vendor/firebase-firestore-compat.js',
-    'vendor/xlsx.full.min.js',
-    'assets/unified-session.js',
-    'assets/security-client.js',
-    'assets/lotfolio.js',
-  ];
-  const tags = await Promise.all(
+  const calculator = await buildCalculatorAssets(site);
+  const scriptTags = (scripts) => Promise.all(
     scripts.map(
       async (file) =>
         '<script ' +
@@ -92,12 +85,17 @@ if (!process.argv.includes('--engine-only')) {
         '" crossorigin="anonymous"></script>',
     ),
   );
+  const tags = await scriptTags([calculator.sdk,'assets/unified-session.js','assets/security-client.js','assets/lotfolio.js']);
+  const calculatorTags = await scriptTags([calculator.sdk,'assets/security-client.js',calculator.runtime]);
+  const frameTemplate = await readFile('lotfolio/calculator-frame.html','utf8');
+  await writeFile(site+'/calculator-frame.html',frameTemplate.replace('<!-- calculator scripts -->',calculatorTags.join('\n  ')));
   const html = [
     '<!doctype html>',
     '<html lang="ko"><head><meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<meta http-equiv="Content-Security-Policy" content="' + metaPolicy + '">',
     '<title>Lotfolio | 패키징 · 창고 워크스페이스</title>',
+    '<meta name="calculator-runtime" content="/'+calculator.runtime+'">',
     '<link rel="icon" type="image/png" href="/assets/lotfolio-icon.png">',
     '<link rel="stylesheet" href="/assets/lotfolio.css" integrity="' +
       (await integrity('assets/lotfolio.css')) +
@@ -108,7 +106,7 @@ if (!process.argv.includes('--engine-only')) {
   ].join('\n');
   for (const page of ['index.html', 'calculator.html']) await writeFile(site + '/' + page, html);
   // Refresh integrity hashes from the exact served bytes, including the calculator bridge.
-  for (const page of ['calculator-frame.html', 'warehouse-frame.html']) {
+  for (const page of ['warehouse-frame.html']) {
     const file = site + '/' + page;
     let content = await readFile(file, 'utf8');
     for (const [tag, src] of [...content.matchAll(/<script\b[^>]*?\bsrc="\/?([^":]+)"[^>]*>/g)]) {
@@ -121,4 +119,5 @@ if (!process.argv.includes('--engine-only')) {
     }
     await writeFile(file, content);
   }
+  await removeSupersededBundles(site,calculator);
 }
